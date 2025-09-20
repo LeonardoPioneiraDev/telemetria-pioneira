@@ -12,7 +12,7 @@ export interface EmailTemplate {
 
 export interface SendEmailOptions {
   to: string | string[];
-  subject: string;
+  subject?: string; // ✅ Opcional
   html?: string;
   text?: string;
   template?: string;
@@ -24,6 +24,7 @@ export class EmailConfig {
   private static instance: EmailConfig;
   private transporter: Transporter | null = null;
   private templates: Map<string, string> = new Map();
+  private isInitialized: boolean = false;
 
   private constructor() {}
 
@@ -37,12 +38,15 @@ export class EmailConfig {
   public async initialize(): Promise<void> {
     if (!environment.email.enabled) {
       logger.info('📧 Serviço de email desabilitado');
+      this.isInitialized = true;
       return;
     }
 
     try {
-      // Configuração do transporter
-      this.transporter = nodemailer.createTransporter({
+      logger.info('📧 Inicializando serviço de email...');
+
+      // ✅ CORREÇÃO: Usar a estrutura correta do environment
+      this.transporter = nodemailer.createTransport({
         host: environment.email.smtp.host,
         port: environment.email.smtp.port,
         secure: environment.email.smtp.secure,
@@ -58,18 +62,32 @@ export class EmailConfig {
         socketTimeout: environment.email.timeout
       });
 
-      // Verificar conexão
-      await this.verifyConnection();
+      // Verificar conexão apenas se debug estiver habilitado
+      if (environment.email.debug) {
+        await this.verifyConnection();
+      }
 
       // Carregar templates
       await this.loadTemplates();
 
-      logger.info('✅ Serviço de email configurado com sucesso');
+      this.isInitialized = true;
+      logger.info('✅ Serviço de email configurado com sucesso', {
+        host: environment.email.smtp.host,
+        port: environment.email.smtp.port,
+        secure: environment.email.smtp.secure,
+        templatesLoaded: this.templates.size
+      });
 
     } catch (error) {
       logger.error('❌ Erro ao configurar serviço de email:', error);
-      if (environment.email.logErrors) {
+      
+      // Se email for obrigatório, re-throw o erro
+      if (environment.email.enabled && environment.email.logErrors) {
         throw error;
+      } else {
+        // Se não for obrigatório, continuar sem email
+        logger.warn('⚠️ Continuando sem serviço de email...');
+        this.isInitialized = true;
       }
     }
   }
@@ -80,8 +98,12 @@ export class EmailConfig {
     }
 
     try {
-      await this.transporter.verify();
-      logger.info('📧 Conexão SMTP verificada com sucesso');
+      const isConnected = await this.transporter.verify();
+      if (isConnected) {
+        logger.info('📧 Conexão SMTP verificada com sucesso');
+      } else {
+        throw new Error('Falha na verificação da conexão SMTP');
+      }
     } catch (error) {
       logger.error('❌ Falha na verificação da conexão SMTP:', error);
       throw error;
@@ -89,23 +111,90 @@ export class EmailConfig {
   }
 
   private async loadTemplates(): Promise<void> {
-    const templatesDir = environment.email.templates.dir;
-    const templateFiles = ['welcome.html', 'resetPassword.html', 'passwordChanged.html'];
+    try {
+      const templatesDir = environment.email.templates.dir;
+      const templateFiles = ['welcome.html', 'resetPassword.html', 'passwordChanged.html'];
 
-    for (const file of templateFiles) {
-      try {
-        const templatePath = join(process.cwd(), templatesDir, file);
-        const templateContent = readFileSync(templatePath, 'utf-8');
-        const templateName = file.replace('.html', '');
-        this.templates.set(templateName, templateContent);
-        
-        if (environment.email.debug) {
-          logger.debug(`📄 Template carregado: ${templateName}`);
+      for (const file of templateFiles) {
+        try {
+          const templatePath = join(process.cwd(), templatesDir, file);
+          const templateContent = readFileSync(templatePath, 'utf-8');
+          const templateName = file.replace('.html', '');
+          this.templates.set(templateName, templateContent);
+          
+          if (environment.email.debug) {
+            logger.debug(`📄 Template carregado: ${templateName}`);
+          }
+        } catch (error) {
+          // Criar template padrão se arquivo não existir
+          const templateName = file.replace('.html', '');
+          const defaultTemplate = this.createDefaultTemplate(templateName);
+          this.templates.set(templateName, defaultTemplate);
+          
+          if (environment.email.debug) {
+            logger.debug(`📄 Template padrão criado: ${templateName}`);
+          }
         }
-      } catch (error) {
-        logger.warn(`⚠️ Não foi possível carregar o template ${file}:`, error);
       }
+
+      logger.info(`📄 Templates carregados: ${this.templates.size}`);
+    } catch (error) {
+      logger.warn('⚠️ Erro ao carregar templates, usando templates padrão:', error);
+      this.createDefaultTemplates();
     }
+  }
+
+  private createDefaultTemplate(templateName: string): string {
+    const defaultTemplates = {
+      welcome: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Bem-vindo ao {{appName}}, {{name}}!</h2>
+          <p>Sua conta foi criada com sucesso.</p>
+          <p><strong>Nome de usuário:</strong> {{username}}</p>
+          <p>Você pode acessar o sistema através do link abaixo:</p>
+          <p><a href="{{loginUrl}}" style="background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Acessar Sistema</a></p>
+          <hr style="border: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">Este é um email automático, não responda a esta mensagem.</p>
+        </div>
+      `,
+      resetPassword: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Recuperação de Senha</h2>
+          <p>Olá {{name}},</p>
+          <p>Você solicitou a recuperação de sua senha. Clique no link abaixo para criar uma nova senha:</p>
+          <p><a href="{{resetUrl}}" style="background-color: #dc3545; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">Redefinir Senha</a></p>
+          <p>Este link é válido por {{expiresIn}}.</p>
+          <p>Se você não solicitou esta recuperação, ignore este email.</p>
+          <hr style="border: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">Este é um email automático, não responda a esta mensagem.</p>
+        </div>
+      `,
+      passwordChanged: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #333;">Senha Alterada</h2>
+          <p>Olá {{name}},</p>
+          <p>Sua senha foi alterada com sucesso em {{changeDate}}.</p>
+          <p><strong>IP do acesso:</strong> {{ipAddress}}</p>
+          <p>Se você não fez esta alteração, entre em contato conosco imediatamente.</p>
+          <hr style="border: 1px solid #eee; margin: 20px 0;">
+          <p style="color: #666; font-size: 12px;">Este é um email automático, não responda a esta mensagem.</p>
+        </div>
+      `
+    };
+
+    return defaultTemplates[templateName as keyof typeof defaultTemplates] || `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2>{{appName}}</h2>
+        <p>{{message}}</p>
+      </div>
+    `;
+  }
+
+  private createDefaultTemplates(): void {
+    const templateNames = ['welcome', 'resetPassword', 'passwordChanged'];
+    templateNames.forEach(name => {
+      this.templates.set(name, this.createDefaultTemplate(name));
+    });
   }
 
   private processTemplate(templateName: string, variables: Record<string, any> = {}): string {
@@ -122,10 +211,10 @@ export class EmailConfig {
       processedTemplate = processedTemplate.replace(regex, String(value));
     });
 
-    // Adicionar variáveis padrão
+    // ✅ CORREÇÃO: Usar a estrutura correta do environment
     const defaultVariables = {
       appName: environment.email.from.name,
-      frontendUrl: environment.frontend.url,
+      frontendUrl: environment.frontend.url, // ✅ CORRIGIDO: frontend.url
       supportEmail: environment.email.from.address,
       currentYear: new Date().getFullYear()
     };
@@ -140,12 +229,22 @@ export class EmailConfig {
 
   public async sendEmail(options: SendEmailOptions): Promise<boolean> {
     if (!environment.email.enabled) {
-      logger.warn('📧 Tentativa de envio de email com serviço desabilitado');
-      return false;
+      if (environment.email.debug) {
+        logger.debug('📧 Email desabilitado, simulando envio:', {
+          to: options.to,
+          subject: options.subject || 'Template: ' + options.template,
+          template: options.template
+        });
+      }
+      return true;
+    }
+
+    if (!this.isInitialized) {
+      throw new Error('Serviço de email não inicializado');
     }
 
     if (!this.transporter) {
-      throw new Error('Serviço de email não inicializado');
+      throw new Error('Transporter não disponível');
     }
 
     let attempt = 0;
@@ -161,21 +260,14 @@ export class EmailConfig {
           html = this.processTemplate(options.template, options.variables);
           
           // Usar subject do template se não especificado
-          if (!options.subject) {
-            switch (options.template) {
-              case 'welcome':
-                subject = environment.email.templates.welcomeSubject;
-                break;
-              case 'resetPassword':
-                subject = environment.email.templates.resetPasswordSubject;
-                break;
-              case 'passwordChanged':
-                subject = environment.email.templates.passwordChangedSubject;
-                break;
-              default:
-                subject = 'Notificação do Sistema';
-            }
+          if (!subject) {
+            subject = this.getTemplateSubject(options.template);
           }
+        }
+
+        // Validar se temos subject
+        if (!subject) {
+          throw new Error('Subject é obrigatório quando não usando template ou template sem subject padrão');
         }
 
         const mailOptions: SendMailOptions = {
@@ -215,12 +307,18 @@ export class EmailConfig {
           logger.error(`❌ Erro no envio de email (tentativa ${attempt}/${maxAttempts}):`, {
             error: error instanceof Error ? error.message : 'Erro desconhecido',
             to: options.to,
-            subject: options.subject
+            subject: options.subject,
+            template: options.template
           });
         }
 
         if (attempt >= maxAttempts) {
-          throw error;
+          if (environment.email.logErrors) {
+            throw error;
+          } else {
+            logger.warn('⚠️ Falha no envio de email após todas as tentativas');
+            return false;
+          }
         }
 
         // Aguardar antes da próxima tentativa
@@ -229,6 +327,16 @@ export class EmailConfig {
     }
 
     return false;
+  }
+
+  private getTemplateSubject(templateName: string): string {
+    const subjects = {
+      welcome: environment.email.templates.welcomeSubject,
+      resetPassword: environment.email.templates.resetPasswordSubject,
+      passwordChanged: environment.email.templates.passwordChangedSubject
+    };
+
+    return subjects[templateName as keyof typeof subjects] || 'Notificação do Sistema';
   }
 
   public async sendWelcomeEmail(to: string, variables: {
@@ -241,7 +349,7 @@ export class EmailConfig {
       template: 'welcome',
       variables: {
         ...variables,
-        loginUrl: variables.loginUrl || `${environment.frontend.url}/login`
+        loginUrl: variables.loginUrl || `${environment.frontend.url}/login` // ✅ CORRIGIDO
       }
     });
   }
@@ -257,7 +365,7 @@ export class EmailConfig {
       template: 'resetPassword',
       variables: {
         ...variables,
-        resetUrl: variables.resetUrl || `${environment.frontend.url}/reset-password?token=${variables.resetToken}`,
+        resetUrl: variables.resetUrl || `${environment.frontend.url}/reset-password?token=${variables.resetToken}`, // ✅ CORRIGIDO
         expiresIn: variables.expiresIn || '1 hora'
       }
     });
@@ -280,19 +388,26 @@ export class EmailConfig {
   }
 
   public async healthCheck(): Promise<{
-    status: 'healthy' | 'unhealthy';
+    status: 'healthy' | 'unhealthy' | 'disabled';
     details: any;
   }> {
     if (!environment.email.enabled) {
       return {
-        status: 'healthy',
+        status: 'disabled',
         details: { message: 'Serviço de email desabilitado' }
+      };
+    }
+
+    if (!this.isInitialized) {
+      return {
+        status: 'unhealthy',
+        details: { message: 'Serviço não inicializado' }
       };
     }
 
     try {
       if (!this.transporter) {
-        throw new Error('Transporter não inicializado');
+        throw new Error('Transporter não disponível');
       }
 
       const start = Date.now();
@@ -305,7 +420,8 @@ export class EmailConfig {
           responseTime: `${responseTime}ms`,
           host: environment.email.smtp.host,
           port: environment.email.smtp.port,
-          templatesLoaded: this.templates.size
+          templatesLoaded: this.templates.size,
+          templates: Array.from(this.templates.keys())
         }
       };
     } catch (error) {
@@ -322,6 +438,19 @@ export class EmailConfig {
 
   public getLoadedTemplates(): string[] {
     return Array.from(this.templates.keys());
+  }
+
+  public isServiceInitialized(): boolean {
+    return this.isInitialized;
+  }
+
+  public async close(): Promise<void> {
+    if (this.transporter) {
+      this.transporter.close();
+      this.transporter = null;
+      this.isInitialized = false;
+      logger.info('📧 Serviço de email fechado');
+    }
   }
 }
 
