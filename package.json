@@ -1,0 +1,36 @@
+{
+  "name": "telemetria-pioneira",
+  "version": "1.0.0",
+  "description": "Telemetria Pioneira - Sistema completo de telemetria com autenticação",
+  "private": true,
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev --parallel",
+    "start": "turbo run start",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "test": "turbo run test",
+    "test:watch": "turbo run test:watch",
+    "clean": "turbo run clean && rm -rf node_modules/.cache",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "typecheck": "turbo run typecheck",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f backend",
+    "docker:restart": "docker-compose restart backend",
+    "migrate": "pnpm --filter=backend migrate",
+    "migrate:docker": "pnpm --filter=backend migrate:docker"
+  },
+  "devDependencies": {
+    "@turbo/gen": "^1.10.12",
+    "prettier": "^3.0.3",
+    "turbo": "^1.10.12"
+  },
+  "packageManager": "pnpm@8.15.0",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

@@ -20,7 +20,7 @@ services:
       - "5435:5432"  # ✅ Externa:Interna
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/scripts/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+      - ./apps/backend/scripts/01-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
     networks:
       - telemetria-network
     healthcheck:
@@ -35,8 +35,8 @@ services:
   # ==========================================
   backend:
     build:
-      context: ./backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./apps/backend/Dockerfile
       no_cache: true
     container_name: telemetria-backend
     restart: unless-stopped
@@ -98,8 +98,8 @@ services:
     ports:
       - "3333:3333"
     volumes:
-      - ./backend/logs:/app/logs
-      - ./backend/src/templates:/app/src/templates:ro
+      - ./apps/backend/logs:/app/logs
+      - ./apps/backend/src/templates:/app/src/templates:ro
     networks:
       - telemetria-network
     healthcheck:
