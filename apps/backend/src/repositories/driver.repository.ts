@@ -26,6 +26,19 @@ export class DriverRepository extends BaseRepository<Driver> {
   async updateByExternalId(externalId: number, data: DeepPartial<Driver>): Promise<void> {
     await this.repository.update({ external_id: externalId }, data);
   }
+  /**
+   * Busca entidades por uma lista de IDs externos.
+   * @param externalIds Array de IDs externos.
+   */
+  async findByExternalIds(externalIds: number[]): Promise<any[]> {
+    if (externalIds.length === 0) {
+      return [];
+    }
+    return this.repository
+      .createQueryBuilder('entity')
+      .where('entity.external_id IN (:...externalIds)', { externalIds })
+      .getMany();
+  }
 
   /**
    * Cria um novo registro de motorista.
