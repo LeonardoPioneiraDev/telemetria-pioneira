@@ -45,6 +45,7 @@
     "bullmq": "^5.58.7",
     "dotenv": "^16.3.1",
     "fastify": "^4.24.3",
+    "fastify-type-provider-zod": "^6.0.0",
     "ioredis": "^5.8.0",
     "joi": "^17.11.0",
     "json-bigint": "^1.0.0",
@@ -55,7 +56,8 @@
     "reflect-metadata": "^0.2.2",
     "typeorm": "^0.3.27",
     "uuid": "^9.0.1",
-    "winston": "^3.11.0"
+    "winston": "^3.11.0",
+    "zod": "^4.1.11"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
