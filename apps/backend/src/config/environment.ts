@@ -23,15 +23,16 @@ export const environment: EnvironmentConfig = {
     ssl: process.env.DATABASE_SSL === 'true',
     maxConnections: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '10'),
     connectionTimeout: parseInt(process.env.DATABASE_CONNECTION_TIMEOUT || '18000000'),
-    queryTimeout: parseInt(process.env.DATABASE_QUERY_TIMEOUT || '18000000')
+    queryTimeout: parseInt(process.env.DATABASE_QUERY_TIMEOUT || '18000000'),
   },
 
   // JWT
   jwt: {
     secret: process.env.JWT_SECRET || 'telemetria_secret_key_super_segura_2024_dev_environment',
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'telemetria_refresh_secret_key_2024_dev_environment',
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d'
+    refreshSecret:
+      process.env.JWT_REFRESH_SECRET || 'telemetria_refresh_secret_key_2024_dev_environment',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
 
   // Auth
@@ -46,8 +47,8 @@ export const environment: EnvironmentConfig = {
       requireUppercase: process.env.PASSWORD_REQUIRE_UPPERCASE !== 'false',
       requireLowercase: process.env.PASSWORD_REQUIRE_LOWERCASE !== 'false',
       requireNumbers: process.env.PASSWORD_REQUIRE_NUMBERS !== 'false',
-      requireSymbols: process.env.PASSWORD_REQUIRE_SYMBOLS !== 'false'
-    }
+      requireSymbols: process.env.PASSWORD_REQUIRE_SYMBOLS !== 'false',
+    },
   },
 
   // Email
@@ -66,27 +67,43 @@ export const environment: EnvironmentConfig = {
       secure: process.env.SMTP_SECURE === 'true',
       tls: process.env.SMTP_TLS === 'true',
       startTls: process.env.SMTP_STARTTLS === 'true',
-      ignoreTls: process.env.SMTP_IGNORE_TLS === 'true'
+      ignoreTls: process.env.SMTP_IGNORE_TLS === 'true',
     },
     from: {
       name: process.env.EMAIL_FROM_NAME || 'telemetria Sistema',
-      address: process.env.EMAIL_FROM_ADDRESS || ''
+      address: process.env.EMAIL_FROM_ADDRESS || '',
     },
     templates: {
       dir: process.env.EMAIL_TEMPLATE_DIR || 'src/templates/email',
-      resetPasswordSubject: process.env.EMAIL_RESET_PASSWORD_SUBJECT || 'Recuperação de Senha - telemetria',
+      resetPasswordSubject:
+        process.env.EMAIL_RESET_PASSWORD_SUBJECT || 'Recuperação de Senha - telemetria',
       welcomeSubject: process.env.EMAIL_WELCOME_SUBJECT || 'Bem-vindo ao telemetria',
-      passwordChangedSubject: process.env.EMAIL_PASSWORD_CHANGED_SUBJECT || 'Senha Alterada - telemetria'
-    }
+      passwordChangedSubject:
+        process.env.EMAIL_PASSWORD_CHANGED_SUBJECT || 'Senha Alterada - telemetria',
+    },
   },
 
   // CORS
   cors: {
     origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
-    methods: process.env.CORS_METHODS?.split(',') || ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: process.env.CORS_ALLOWED_HEADERS?.split(',') || ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    methods: process.env.CORS_METHODS?.split(',') || [
+      'GET',
+      'HEAD',
+      'PUT',
+      'PATCH',
+      'POST',
+      'DELETE',
+      'OPTIONS',
+    ],
+    allowedHeaders: process.env.CORS_ALLOWED_HEADERS?.split(',') || [
+      'Content-Type',
+      'Authorization',
+      'X-Requested-With',
+      'Accept',
+      'Origin',
+    ],
     credentials: process.env.CORS_CREDENTIALS === 'true',
-    maxAge: parseInt(process.env.CORS_MAX_AGE || '86400')
+    maxAge: parseInt(process.env.CORS_MAX_AGE || '86400'),
   },
 
   // Rate Limiting
@@ -94,16 +111,24 @@ export const environment: EnvironmentConfig = {
     enabled: process.env.RATE_LIMIT_ENABLED === 'true',
     global: {
       ttl: parseInt(process.env.RATE_LIMIT_GLOBAL_TTL || '60000'),
-      limit: parseInt(process.env.RATE_LIMIT_GLOBAL_LIMIT || '100')
+      limit: parseInt(process.env.RATE_LIMIT_GLOBAL_LIMIT || '100'),
     },
     auth: {
       ttl: parseInt(process.env.RATE_LIMIT_AUTH_TTL || '18000000'),
-      limit: parseInt(process.env.RATE_LIMIT_AUTH_LIMIT || '5')
+      limit: parseInt(process.env.RATE_LIMIT_AUTH_LIMIT || '5'),
     },
     passwordReset: {
       ttl: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_TTL || '3600000'),
-      limit: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_LIMIT || '3')
-    }
+      limit: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_LIMIT || '3'),
+    },
+  },
+
+  redis: {
+    enabled: process.env.REDIS_ENABLED === 'true',
+    host: process.env.REDIS_HOST || 'localhost',
+    port: parseInt(process.env.REDIS_PORT || '6379'),
+    password: process.env.REDIS_PASSWORD || undefined,
+    db: parseInt(process.env.REDIS_DB || '0'),
   },
 
   // Logs
@@ -121,20 +146,20 @@ export const environment: EnvironmentConfig = {
       database: process.env.DEBUG_DATABASE === 'true',
       auth: process.env.DEBUG_AUTH === 'true',
       email: process.env.DEBUG_EMAIL === 'true',
-      cache: process.env.DEBUG_CACHE === 'true'
+      cache: process.env.DEBUG_CACHE === 'true',
     },
     performance: {
       slowQueries: process.env.LOG_SLOW_QUERIES === 'true',
       slowQueryThreshold: parseInt(process.env.SLOW_QUERY_THRESHOLD || '1000'),
       connections: process.env.LOG_CONNECTIONS === 'true',
       errors: process.env.LOG_ERRORS === 'true',
-      securityEvents: process.env.LOG_SECURITY_EVENTS === 'true'
-    }
+      securityEvents: process.env.LOG_SECURITY_EVENTS === 'true',
+    },
   },
 
   // Swagger
   swagger: {
-    enabled: process.env.SWAGGER_ENABLED === 'true'
+    enabled: process.env.SWAGGER_ENABLED === 'true',
   },
 
   // Admin
@@ -143,19 +168,19 @@ export const environment: EnvironmentConfig = {
     username: process.env.ADMIN_USERNAME || 'admin',
     email: process.env.ADMIN_EMAIL || '',
     password: process.env.ADMIN_PASSWORD || '',
-    fullName: process.env.ADMIN_FULL_NAME || 'Administrator'
+    fullName: process.env.ADMIN_FULL_NAME || 'Administrator',
   },
 
   // Frontend
   frontend: {
-    url: process.env.FRONTEND_URL || 'http://localhost:3000'
+    url: process.env.FRONTEND_URL || 'http://localhost:3000',
   },
 
   // Helmet
   helmet: {
     enabled: process.env.HELMET_ENABLED === 'true',
     cspEnabled: process.env.HELMET_CSP_ENABLED === 'true',
-    crossOriginEmbedderPolicy: process.env.HELMET_CROSS_ORIGIN_EMBEDDER_POLICY === 'true'
+    crossOriginEmbedderPolicy: process.env.HELMET_CROSS_ORIGIN_EMBEDDER_POLICY === 'true',
   },
 
   // Trust Proxy
@@ -164,14 +189,14 @@ export const environment: EnvironmentConfig = {
   // Compression
   compression: {
     enabled: process.env.COMPRESSION_ENABLED === 'true',
-    level: parseInt(process.env.COMPRESSION_LEVEL || '6')
+    level: parseInt(process.env.COMPRESSION_LEVEL || '6'),
   },
 
   // API
   api: {
     timeout: parseInt(process.env.API_TIMEOUT || '30000'),
     retryAttempts: parseInt(process.env.API_RETRY_ATTEMPTS || '3'),
-    retryDelay: parseInt(process.env.API_RETRY_DELAY || '1000')
+    retryDelay: parseInt(process.env.API_RETRY_DELAY || '1000'),
   },
 
   // Health Check
@@ -179,7 +204,7 @@ export const environment: EnvironmentConfig = {
     enabled: process.env.HEALTH_CHECK_ENABLED === 'true',
     database: process.env.HEALTH_CHECK_DATABASE === 'true',
     memory: process.env.HEALTH_CHECK_MEMORY === 'true',
-    disk: process.env.HEALTH_CHECK_DISK === 'true'
+    disk: process.env.HEALTH_CHECK_DISK === 'true',
   },
 
   // Cleanup
@@ -187,15 +212,21 @@ export const environment: EnvironmentConfig = {
     enabled: process.env.CLEANUP_ENABLED === 'true',
     intervalMinutes: parseInt(process.env.CLEANUP_INTERVAL_MINUTES || '60'),
     expiredTokens: process.env.CLEANUP_EXPIRED_TOKENS === 'true',
-    failedLoginAttempts: process.env.CLEANUP_FAILED_LOGIN_ATTEMPTS === 'true'
+    failedLoginAttempts: process.env.CLEANUP_FAILED_LOGIN_ATTEMPTS === 'true',
   },
 
   // Development
   dev: {
     seedDatabase: process.env.DEV_SEED_DATABASE === 'true',
     resetDatabase: process.env.DEV_RESET_DATABASE === 'true',
-    createSampleUsers: process.env.DEV_CREATE_SAMPLE_USERS === 'true'
-  }
+    createSampleUsers: process.env.DEV_CREATE_SAMPLE_USERS === 'true',
+  },
+  mixApi: {
+    username: process.env.MIX_USERNAME || '',
+    password: process.env.MIX_PASSWORD || '',
+    basicAuthToken: process.env.MIX_BASIC_AUTH_TOKEN || '',
+    scope: process.env.MIX_SCOPE || 'offline_access MiX.Integrate',
+  },
 };
 
 // Validação de variáveis obrigatórias
@@ -204,13 +235,15 @@ const requiredEnvVars = [
   'DATABASE_HOST',
   'DATABASE_USERNAME',
   'DATABASE_PASSWORD',
-  'DATABASE_NAME'
+  'DATABASE_NAME',
 ];
 
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 
 if (missingEnvVars.length > 0) {
-  throw new Error(`❌ Variáveis de ambiente obrigatórias não encontradas: ${missingEnvVars.join(', ')}`);
+  throw new Error(
+    `❌ Variáveis de ambiente obrigatórias não encontradas: ${missingEnvVars.join(', ')}`
+  );
 }
 
 export default environment;

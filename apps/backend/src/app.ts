@@ -1,18 +1,19 @@
 import Fastify, { FastifyInstance } from 'fastify';
-import { environment } from './config/environment.js';
-import { logger } from './shared/utils/logger.js';
-import { corsConfig } from './shared/middleware/corsConfig.js';
-import { rateLimiter } from './shared/middleware/rateLimiter.js';
-import { errorHandlerPlugin } from './shared/middleware/errorHandler.js';
-import { databaseConnection } from './database/connection.js';
 import { emailService } from './config/email.js';
+import { environment } from './config/environment.js';
+import { databaseConnection } from './database/connection.js';
 import { authRoutes } from './modules/auth/routes/authRoutes.js';
-
+import { Scheduler } from './scheduler.js';
+import { corsConfig } from './shared/middleware/corsConfig.js';
+import { errorHandlerPlugin } from './shared/middleware/errorHandler.js';
+import { rateLimiter } from './shared/middleware/rateLimiter.js';
+import { logger } from './shared/utils/logger.js';
 // Plugins do Fastify
 import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { initializeDataSource } from './data-source.js';
 
 export class Application {
   private static instance: Application;
@@ -28,7 +29,7 @@ export class Application {
       maxParamLength: 500,
       bodyLimit: 10 * 1024 * 1024, // 10MB
       keepAliveTimeout: 30000,
-      connectionTimeout: 30000
+      connectionTimeout: 30000,
     });
   }
 
@@ -74,7 +75,6 @@ export class Application {
 
       this.isInitialized = true;
       logger.info('✅ Aplicação inicializada com sucesso');
-
     } catch (error) {
       logger.error('❌ Erro ao inicializar aplicação:', error);
       throw error;
@@ -89,7 +89,7 @@ export class Application {
     if (environment.helmet.enabled) {
       await this.fastify.register(helmet, {
         contentSecurityPolicy: environment.helmet.cspEnabled ? undefined : false,
-        crossOriginEmbedderPolicy: environment.helmet.crossOriginEmbedderPolicy
+        crossOriginEmbedderPolicy: environment.helmet.crossOriginEmbedderPolicy,
       });
       logger.info('🛡️ Helmet configurado');
     }
@@ -99,7 +99,7 @@ export class Application {
       await this.fastify.register(import('@fastify/compress'), {
         global: true,
         threshold: 1024,
-        encodings: ['gzip', 'deflate']
+        encodings: ['gzip', 'deflate'],
       });
       logger.info('🗜️ Compressão configurada');
     }
@@ -130,16 +130,16 @@ export class Application {
       sign: {
         expiresIn: environment.jwt.expiresIn,
         issuer: 'telemetria-pioneira',
-        audience: 'telemetria-users'
+        audience: 'telemetria-users',
       },
       verify: {
         issuer: 'telemetria-pioneira',
-        audience: 'telemetria-users'
-      }
+        audience: 'telemetria-users',
+      },
     });
 
     // Decorar fastify com método de autenticação
-    this.fastify.decorate('authenticate', async function(request: any, reply: any) {
+    this.fastify.decorate('authenticate', async function (request: any, reply: any) {
       try {
         await request.jwtVerify();
       } catch (err) {
@@ -162,8 +162,8 @@ export class Application {
           version: '1.0.0',
           contact: {
             name: 'Leonardo Lopes',
-            email: 'leonardolopes@vpioneira.com.br'
-          }
+            email: 'leonardolopes@vpioneira.com.br',
+          },
         },
         host: `${environment.HOST}:${environment.PORT}`,
         schemes: ['http', 'https'],
@@ -174,16 +174,16 @@ export class Application {
             type: 'apiKey',
             name: 'Authorization',
             in: 'header',
-            description: 'Token JWT no formato: Bearer <token>'
-          }
+            description: 'Token JWT no formato: Bearer <token>',
+          },
         },
         tags: [
           { name: 'Autenticação', description: 'Endpoints de autenticação e autorização' },
           { name: 'Perfil', description: 'Gerenciamento de perfil do usuário' },
           { name: 'Administração', description: 'Endpoints administrativos' },
-          { name: 'Sistema', description: 'Endpoints de sistema e saúde' }
-        ]
-      }
+          { name: 'Sistema', description: 'Endpoints de sistema e saúde' },
+        ],
+      },
     });
 
     await this.fastify.register(swaggerUi, {
@@ -192,13 +192,13 @@ export class Application {
         docExpansion: 'list',
         deepLinking: false,
         defaultModelsExpandDepth: 1,
-        defaultModelExpandDepth: 1
+        defaultModelExpandDepth: 1,
       },
       staticCSP: true,
-      transformStaticCSP: (header) => header,
-      transformSpecification: (swaggerObject) => {
+      transformStaticCSP: header => header,
+      transformSpecification: swaggerObject => {
         return swaggerObject;
-      }
+      },
     });
 
     logger.info('📚 Documentação Swagger configurada em /docs');
@@ -209,38 +209,46 @@ export class Application {
    */
   private async registerRoutes(): Promise<void> {
     // Rota de saúde
-    this.fastify.get('/health', {
-      schema: {
-        description: 'Verificar saúde da aplicação',
-        tags: ['Sistema'],
-        response: {
-          200: {
-            type: 'object',
-            properties: {
-              success: { type: 'boolean' },
-              message: { type: 'string' },
-              data: {
-                type: 'object',
-                properties: {
-                  status: { type: 'string' },
-                  timestamp: { type: 'string' },
-                  uptime: { type: 'number' },
-                  services: { type: 'object' }
-                }
-              }
-            }
-          }
-        }
-      }
-    }, this.healthCheck.bind(this));
+    this.fastify.get(
+      '/health',
+      {
+        schema: {
+          description: 'Verificar saúde da aplicação',
+          tags: ['Sistema'],
+          response: {
+            200: {
+              type: 'object',
+              properties: {
+                success: { type: 'boolean' },
+                message: { type: 'string' },
+                data: {
+                  type: 'object',
+                  properties: {
+                    status: { type: 'string' },
+                    timestamp: { type: 'string' },
+                    uptime: { type: 'number' },
+                    services: { type: 'object' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      this.healthCheck.bind(this)
+    );
 
     // Rota raiz
-    this.fastify.get('/', {
-      schema: {
-        description: 'Informações da API',
-        tags: ['Sistema']
-      }
-    }, this.rootHandler.bind(this));
+    this.fastify.get(
+      '/',
+      {
+        schema: {
+          description: 'Informações da API',
+          tags: ['Sistema'],
+        },
+      },
+      this.rootHandler.bind(this)
+    );
 
     // Registrar rotas de autenticação
     await this.fastify.register(authRoutes, { prefix: '/api' });
@@ -267,26 +275,26 @@ export class Application {
     this.fastify.addHook('onRequest', async (request, reply) => {
       const start = Date.now();
       request.startTime = start;
-      
+
       logger.info('📥 Request recebido', {
         requestId: request.id,
         method: request.method,
         url: request.url,
         ip: request.ip,
-        userAgent: request.headers['user-agent']
+        userAgent: request.headers['user-agent'],
       });
     });
 
     // Hook de response
     this.fastify.addHook('onSend', async (request, reply, payload) => {
       const duration = Date.now() - (request as any).startTime;
-      
+
       logger.info('📤 Response enviado', {
         requestId: request.id,
         method: request.method,
         url: request.url,
         statusCode: reply.statusCode,
-        duration: `${duration}ms`
+        duration: `${duration}ms`,
       });
 
       return payload;
@@ -299,7 +307,7 @@ export class Application {
         method: request.method,
         url: request.url,
         error: error.message,
-        stack: error.stack
+        stack: error.stack,
       });
     });
 
@@ -310,12 +318,12 @@ export class Application {
    * Inicializar serviços externos
    */
   private async initializeExternalServices(): Promise<void> {
-    // Inicializar conexão com banco de dados
-    await databaseConnection.initialize();
+    await initializeDataSource();
+    logger.info('✅ Conexão do TypeORM com o banco de dados estabelecida!');
 
     // Inicializar serviço de email
     await emailService.initialize();
-
+    Scheduler.start();
     logger.info('🔌 Serviços externos inicializados');
   }
 
@@ -334,9 +342,9 @@ export class Application {
         endpoints: {
           health: '/health',
           auth: '/api/auth',
-          docs: '/docs'
-        }
-      }
+          docs: '/docs',
+        },
+      },
     };
   }
 
@@ -346,7 +354,7 @@ export class Application {
   private async healthCheck(request: any, reply: any) {
     try {
       const startTime = Date.now();
-      
+
       // Verificar serviços
       const services: any = {};
 
@@ -355,7 +363,7 @@ export class Application {
         const dbHealth = await databaseConnection.getConnectionInfo();
         services.database = {
           status: dbHealth.isConnected ? 'healthy' : 'unhealthy',
-          details: dbHealth
+          details: dbHealth,
         };
       }
 
@@ -372,14 +380,14 @@ export class Application {
             rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
             heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
             heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
-            external: `${Math.round(memUsage.external / 1024 / 1024)}MB`
-          }
+            external: `${Math.round(memUsage.external / 1024 / 1024)}MB`,
+          },
         };
       }
 
       // Determinar status geral
-      const allHealthy = Object.values(services).every((service: any) => 
-        service.status === 'healthy'
+      const allHealthy = Object.values(services).every(
+        (service: any) => service.status === 'healthy'
       );
 
       const responseTime = Date.now() - startTime;
@@ -389,7 +397,7 @@ export class Application {
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
         responseTime: `${responseTime}ms`,
-        services
+        services,
       };
 
       const statusCode = allHealthy ? 200 : 503;
@@ -397,9 +405,8 @@ export class Application {
       return reply.status(statusCode).send({
         success: allHealthy,
         message: `Sistema ${allHealthy ? 'saudável' : 'com problemas'}`,
-        data: healthData
+        data: healthData,
       });
-
     } catch (error) {
       logger.error('Erro no health check:', error);
       return reply.status(503).send({
@@ -408,8 +415,8 @@ export class Application {
         data: {
           status: 'unhealthy',
           timestamp: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Erro desconhecido'
-        }
+          error: error instanceof Error ? error.message : 'Erro desconhecido',
+        },
       });
     }
   }
@@ -426,8 +433,8 @@ export class Application {
         timestamp: new Date().toISOString(),
         requestId: request.id,
         method: request.method,
-        url: request.url
-      }
+        url: request.url,
+      },
     });
   }
 
@@ -442,15 +449,14 @@ export class Application {
 
       const address = await this.fastify.listen({
         host: environment.HOST,
-        port: environment.PORT
+        port: environment.PORT,
       });
 
       logger.info('🚀 Servidor iniciado com sucesso', {
         address,
         environment: environment.NODE_ENV,
-        documentation: environment.swagger.enabled ? `${address}/docs` : 'Desabilitada'
+        documentation: environment.swagger.enabled ? `${address}/docs` : 'Desabilitada',
       });
-
     } catch (error) {
       logger.error('❌ Erro ao iniciar servidor:', error);
       throw error;
