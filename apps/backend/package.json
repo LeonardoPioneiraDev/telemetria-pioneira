@@ -12,6 +12,7 @@
     "migrate": "tsx src/database/migrate.ts",
     "migrate:docker": "sleep 10 && tsx src/database/migrate.ts",
     "trigger:master-sync": "tsx src/scripts/trigger-master-sync.ts",
+    "work:events": "tsx src/workers/event-ingestion-runner.ts",
     "work:master-data": "tsx src/workers/runner.ts",
     "test": "jest",
     "test:watch": "jest --watch",

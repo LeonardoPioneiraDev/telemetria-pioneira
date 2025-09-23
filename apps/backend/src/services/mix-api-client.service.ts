@@ -144,6 +144,30 @@ export class MixApiClient {
       return null;
     }
   }
+  public async getEventsSince(sinceToken: string): Promise<EventsSinceResponse | null> {
+    try {
+      const token = await this._getAccessToken();
+      if (!token) throw new Error('Não foi possível obter o token de acesso para buscar eventos.');
+
+      const url = `/events/groups/createdsince/organisation/1662701282895036416/sincetoken/${sinceToken}/quantity/1000`;
+
+      const response = await this.api.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      return {
+        events: response.data,
+        hasMoreItems: response.headers['hasmoreitems'] === 'True',
+        nextSinceToken: response.headers['getsincetoken'],
+      };
+    } catch (error) {
+      logger.error(
+        `Erro ao buscar eventos com sinceToken ${sinceToken}:`,
+        this._formatAxiosError(error)
+      );
+      return null;
+    }
+  }
 
   // --- MÉTODOS PRIVADOS ---
 

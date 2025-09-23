@@ -19,6 +19,19 @@ export class EventTypeRepository extends BaseRepository<EventType> {
       select: ['external_id'],
     });
   }
+  /**
+   * Busca entidades por uma lista de IDs externos.
+   * @param externalIds Array de IDs externos.
+   */
+  async findByExternalIds(externalIds: number[]): Promise<any[]> {
+    if (externalIds.length === 0) {
+      return [];
+    }
+    return this.repository
+      .createQueryBuilder('entity')
+      .where('entity.external_id IN (:...externalIds)', { externalIds })
+      .getMany();
+  }
 
   /**
    * Atualiza um tipo de evento com base em seu ID externo.
