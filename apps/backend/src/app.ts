@@ -13,7 +13,9 @@ import helmet from '@fastify/helmet';
 import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
+import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import { initializeDataSource } from './data-source.js';
+import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 
 export class Application {
   private static instance: Application;
@@ -22,15 +24,17 @@ export class Application {
 
   private constructor() {
     this.fastify = Fastify({
-      logger: false, // Usar nosso logger customizado
+      logger: false,
       trustProxy: environment.trustProxy,
       requestIdHeader: 'x-request-id',
       requestIdLogLabel: 'requestId',
       maxParamLength: 500,
-      bodyLimit: 10 * 1024 * 1024, // 10MB
+      bodyLimit: 10 * 1024 * 1024,
       keepAliveTimeout: 30000,
       connectionTimeout: 30000,
-    });
+    }).withTypeProvider<ZodTypeProvider>();
+    this.fastify.setValidatorCompiler(validatorCompiler);
+    this.fastify.setSerializerCompiler(serializerCompiler);
   }
 
   public static getInstance(): Application {
@@ -252,6 +256,7 @@ export class Application {
 
     // Registrar rotas de autenticação
     await this.fastify.register(authRoutes, { prefix: '/api' });
+    await this.fastify.register(driverRoutes, { prefix: '/api' }); // 2. REGISTRE A NOVA ROTA AQUI
 
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
