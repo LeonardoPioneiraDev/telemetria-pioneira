@@ -1,3 +1,4 @@
+//apps/backend/src/entities/driver.entity.ts
 import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import {
   Column,
