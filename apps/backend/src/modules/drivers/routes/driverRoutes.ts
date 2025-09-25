@@ -3,13 +3,20 @@ import {
   InfractionController,
   infractionsParamsSchema,
 } from '@/modules/infractions/controllers/infractionController.js';
+import {
+  PerformanceReportController,
+  performanceReportParamsSchema,
+  performanceReportQuerySchema,
+} from '@/modules/performance/controllers/performanceReportController.js';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { DriverController, searchQuerySchema } from '../controllers/driverController.js';
+import { performanceReportResponseSchema } from '@/modules/performance/schemas/performanceReport.schema.js';
 
 export async function driverRoutes(fastify: FastifyInstance) {
   const driverController = new DriverController();
   const infractionController = new InfractionController();
+  const performanceReportController = new PerformanceReportController();
 
   fastify.get(
     '/drivers',
@@ -61,5 +68,23 @@ export async function driverRoutes(fastify: FastifyInstance) {
       },
     },
     infractionController.getForDriver.bind(infractionController)
+  );
+
+  fastify.get(
+    '/drivers/:driverId/performance-report',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description: 'Gera relatório de performance de um motorista para geração de formulário.',
+        tags: ['Drivers', 'Performance'],
+        params: performanceReportParamsSchema,
+        querystring: performanceReportQuerySchema,
+        response: {
+          200: performanceReportResponseSchema,
+        },
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    performanceReportController.getPerformanceReport.bind(performanceReportController)
   );
 }

@@ -1,0 +1,46 @@
+// apps/backend/src/modules/performance/schemas/performanceReport.schema.ts
+import { z } from 'zod';
+
+export const performanceReportParamsSchema = z.object({
+  driverId: z.coerce.number().int().positive(),
+});
+
+export const performanceReportQuerySchema = z.object({
+  reportDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  periodDays: z.coerce.number().int().min(1).max(90).optional().default(30),
+});
+
+// ✅ SCHEMA CORRIGIDO - MAIS FLEXÍVEL
+export const performanceReportResponseSchema = z.object({
+  driverInfo: z.object({
+    id: z.number(),
+    name: z.string(),
+    badge: z.string().nullable(),
+  }),
+  reportDetails: z.object({
+    reportDateFormatted: z.string(),
+    periodSummary: z.string(),
+    acknowledgmentText: z.string(),
+  }),
+  performanceSummary: z.object({
+    periods: z.array(
+      z.object({
+        id: z.string(),
+        label: z.string(),
+        startDate: z.string(),
+        endDate: z.string().optional(),
+        date: z.string().optional(),
+      })
+    ),
+    metrics: z.array(
+      z.object({
+        eventType: z.string(),
+        counts: z.record(z.string(), z.number()), // ✅ MUDANÇA: z.record precisa de key type
+      })
+    ),
+    totalEvents: z.number(),
+  }),
+});
