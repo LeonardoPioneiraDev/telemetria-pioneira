@@ -47,4 +47,12 @@ export class EventTypeRepository extends BaseRepository<EventType> {
     const eventType = this.repository.create(data);
     return this.repository.save(eventType);
   }
+
+  async findAll(): Promise<EventType[]> {
+    return this.repository.find();
+  }
+
+  async update(id: number, data: DeepPartial<EventType>): Promise<void> {
+    await this.repository.update(id, data);
+  }
 }

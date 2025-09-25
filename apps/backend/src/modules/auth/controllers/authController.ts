@@ -1,10 +1,10 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { authService } from '../services/authService.js';
-import { userModel } from '../models/User.js';
-import { responseHelper } from '../../../shared/utils/responseHelper.js';
-import { logger, authLogger, securityLogger } from '../../../shared/utils/logger.js';
-import { USER_ROLES } from '../../../shared/constants/index.js';
+import { FastifyReply, FastifyRequest } from 'fastify';
 import type { UserRole } from '../../../shared/constants/index.js';
+import { USER_ROLES } from '../../../shared/constants/index.js';
+import { authLogger, logger } from '../../../shared/utils/logger.js';
+import { responseHelper } from '../../../shared/utils/responseHelper.js';
+import { userModel } from '../models/User.js';
+import { authService } from '../services/authService.js';
 
 export interface RegisterBody {
   email: string;
@@ -104,19 +104,18 @@ export class AuthController {
         username,
         fullName,
         password,
-        acceptTerms
+        acceptTerms,
       });
 
       responseHelper.created(reply, result.user, result.message);
-
     } catch (error) {
       authLogger.error('Erro no registro:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('já está em uso') || error.message.includes('já existe')) {
           return responseHelper.conflictError(reply, error.message);
         }
-        
+
         if (error.message.includes('não atende aos critérios')) {
           return responseHelper.validationError(reply, [error.message]);
         }
@@ -133,35 +132,43 @@ export class AuthController {
     request: FastifyRequest<{ Body: LoginBody }>,
     reply: FastifyReply
   ): Promise<void> {
+    // O tipo de retorno muda para Promise<void>
     try {
       const { email, password, rememberMe } = request.body;
       const ipAddress = request.ip;
 
       authLogger.info('Tentativa de login', { email, ip: ipAddress });
 
-      const result = await authService.login(
-        { email, password, rememberMe },
-        ipAddress
-      );
+      const result = await authService.login({ email, password, rememberMe }, ipAddress);
 
-      responseHelper.loginSuccess(reply, result, 'Login realizado com sucesso');
-
+      // A CORREÇÃO ESTÁ AQUI:
+      // Em vez de usar o responseHelper, enviamos a resposta diretamente.
+      return reply.send({
+        success: true,
+        message: 'Login realizado com sucesso',
+        data: {
+          user: result.user,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn,
+        },
+      });
     } catch (error) {
       authLogger.error('Erro no login:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('Credenciais inválidas')) {
           return responseHelper.authenticationError(reply, 'Email ou senha incorretos');
         }
-        
+
         if (error.message.includes('bloqueada')) {
           return responseHelper.error(reply, error.message, 423, 'ACCOUNT_LOCKED');
         }
-        
+
         if (error.message.includes('inativa') || error.message.includes('suspensa')) {
           return responseHelper.error(reply, error.message, 403, 'ACCOUNT_DISABLED');
         }
-        
+
         if (error.message.includes('pendente')) {
           return responseHelper.error(reply, error.message, 403, 'ACCOUNT_PENDING');
         }
@@ -186,19 +193,18 @@ export class AuthController {
       const result = await authService.refreshToken(refreshToken);
 
       responseHelper.tokenRefreshed(reply, result, 'Token renovado com sucesso');
-
     } catch (error) {
       authLogger.error('Erro na renovação de token:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('expirado') || error.message.includes('inválido')) {
           return responseHelper.authenticationError(reply, 'Token de refresh inválido ou expirado');
         }
-        
+
         if (error.message.includes('não encontrado')) {
           return responseHelper.notFoundError(reply, 'Usuário não encontrado');
         }
-        
+
         if (error.message.includes('inativo')) {
           return responseHelper.error(reply, 'Usuário inativo', 403, 'USER_INACTIVE');
         }
@@ -223,10 +229,9 @@ export class AuthController {
       const result = await authService.requestPasswordReset({ email });
 
       responseHelper.emailSent(reply, result.message);
-
     } catch (error) {
       authLogger.error('Erro na solicitação de reset de senha:', error);
-      
+
       if (error instanceof Error && error.message.includes('Falha ao enviar email')) {
         return responseHelper.serverError(reply, 'Falha ao enviar email de recuperação');
       }
@@ -250,19 +255,18 @@ export class AuthController {
       const result = await authService.resetPassword({ token, newPassword });
 
       responseHelper.passwordChanged(reply, result.message);
-
     } catch (error) {
       authLogger.error('Erro no reset de senha:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('inválido') || error.message.includes('expirado')) {
           return responseHelper.error(reply, error.message, 400, 'INVALID_RESET_TOKEN');
         }
-        
+
         if (error.message.includes('não atende aos critérios')) {
           return responseHelper.validationError(reply, [error.message]);
         }
-        
+
         if (error.message.includes('deve ser diferente')) {
           return responseHelper.error(reply, error.message, 400, 'SAME_PASSWORD');
         }
@@ -287,23 +291,27 @@ export class AuthController {
 
       const result = await authService.changePassword(userId, {
         currentPassword,
-        newPassword
+        newPassword,
       });
 
       responseHelper.passwordChanged(reply, result.message);
-
     } catch (error) {
       authLogger.error('Erro na alteração de senha:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('incorreta')) {
-          return responseHelper.error(reply, 'Senha atual incorreta', 400, 'INVALID_CURRENT_PASSWORD');
+          return responseHelper.error(
+            reply,
+            'Senha atual incorreta',
+            400,
+            'INVALID_CURRENT_PASSWORD'
+          );
         }
-        
+
         if (error.message.includes('não atende aos critérios')) {
           return responseHelper.validationError(reply, [error.message]);
         }
-        
+
         if (error.message.includes('deve ser diferente')) {
           return responseHelper.error(reply, error.message, 400, 'SAME_PASSWORD');
         }
@@ -316,10 +324,7 @@ export class AuthController {
   /**
    * Logout
    */
-  public async logout(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const userId = request.user!.id;
 
@@ -328,7 +333,6 @@ export class AuthController {
       const result = await authService.logout(userId);
 
       responseHelper.logoutSuccess(reply, result.message);
-
     } catch (error) {
       authLogger.error('Erro no logout:', error);
       responseHelper.serverError(reply, 'Erro interno no logout');
@@ -338,20 +342,16 @@ export class AuthController {
   /**
    * Obter perfil do usuário logado
    */
-  public async getProfile(
-    request: FastifyRequest,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const userId = request.user!.id;
 
       const profile = await authService.getProfile(userId);
 
       responseHelper.success(reply, profile, 'Perfil recuperado com sucesso');
-
     } catch (error) {
       logger.error('Erro ao obter perfil:', error);
-      
+
       if (error instanceof Error && error.message.includes('não encontrado')) {
         return responseHelper.notFoundError(reply, 'Usuário não encontrado');
       }
@@ -376,15 +376,14 @@ export class AuthController {
       const updatedProfile = await authService.updateProfile(userId, updateData);
 
       responseHelper.updated(reply, updatedProfile, 'Perfil atualizado com sucesso');
-
     } catch (error) {
       authLogger.error('Erro ao atualizar perfil:', error);
-      
+
       if (error instanceof Error) {
         if (error.message.includes('já está em uso')) {
           return responseHelper.conflictError(reply, error.message);
         }
-        
+
         if (error.message.includes('não encontrado')) {
           return responseHelper.notFoundError(reply, 'Usuário não encontrado');
         }
@@ -407,7 +406,6 @@ export class AuthController {
       const result = await authService.checkEmailExists(email);
 
       responseHelper.success(reply, result, 'Verificação realizada');
-
     } catch (error) {
       logger.error('Erro ao verificar email:', error);
       responseHelper.serverError(reply, 'Erro interno na verificação');
@@ -427,7 +425,6 @@ export class AuthController {
       const result = await authService.checkUsernameExists(username);
 
       responseHelper.success(reply, result, 'Verificação realizada');
-
     } catch (error) {
       logger.error('Erro ao verificar username:', error);
       responseHelper.serverError(reply, 'Erro interno na verificação');
@@ -449,7 +446,7 @@ export class AuthController {
         role,
         status,
         sortBy = 'createdAt',
-        sortOrder = 'desc'
+        sortOrder = 'desc',
       } = request.query;
 
       const options = {
@@ -460,8 +457,8 @@ export class AuthController {
         filters: {
           search,
           role,
-          status
-        }
+          status,
+        },
       };
 
       const result = await userModel.list(options);
@@ -478,11 +475,10 @@ export class AuthController {
         {
           page: result.page,
           limit: result.limit,
-          total: result.total
+          total: result.total,
         },
         'Usuários recuperados com sucesso'
       );
-
     } catch (error) {
       logger.error('Erro ao listar usuários:', error);
       responseHelper.serverError(reply, 'Erro interno ao listar usuários');
@@ -509,7 +505,6 @@ export class AuthController {
       const { password, ...sanitizedUser } = user;
 
       responseHelper.success(reply, sanitizedUser, 'Usuário recuperado com sucesso');
-
     } catch (error) {
       logger.error('Erro ao obter usuário por ID:', error);
       responseHelper.serverError(reply, 'Erro interno ao obter usuário');
@@ -526,9 +521,9 @@ export class AuthController {
     try {
       const userData = request.body;
 
-      authLogger.info('Admin criando usuário', { 
+      authLogger.info('Admin criando usuário', {
         adminId: request.user!.id,
-        email: userData.email 
+        email: userData.email,
       });
 
       // Verificar se email já existe
@@ -550,15 +545,14 @@ export class AuthController {
         fullName: userData.fullName,
         password: userData.password,
         role: userData.role || USER_ROLES.USER,
-        status: userData.status as any || 'active',
-        emailVerified: true // Admin pode criar usuários já verificados
+        status: (userData.status as any) || 'active',
+        emailVerified: true, // Admin pode criar usuários já verificados
       });
 
       // Remover senha
       const { password, ...sanitizedUser } = user;
 
       responseHelper.created(reply, sanitizedUser, 'Usuário criado com sucesso');
-
     } catch (error) {
       authLogger.error('Erro ao criar usuário:', error);
       responseHelper.serverError(reply, 'Erro interno ao criar usuário');
@@ -576,10 +570,10 @@ export class AuthController {
       const { id } = request.params;
       const updateData = request.body;
 
-      authLogger.info('Admin atualizando usuário', { 
+      authLogger.info('Admin atualizando usuário', {
         adminId: request.user!.id,
         targetUserId: id,
-        fields: Object.keys(updateData)
+        fields: Object.keys(updateData),
       });
 
       // Verificar se usuário existe
@@ -599,7 +593,10 @@ export class AuthController {
       if (updateData.username) {
         const usernameExists = await userModel.usernameExists(updateData.username, id);
         if (usernameExists) {
-          return responseHelper.conflictError(reply, 'Nome de usuário já está em uso por outro usuário');
+          return responseHelper.conflictError(
+            reply,
+            'Nome de usuário já está em uso por outro usuário'
+          );
         }
       }
 
@@ -614,7 +611,6 @@ export class AuthController {
       const { password, ...sanitizedUser } = updatedUser;
 
       responseHelper.updated(reply, sanitizedUser, 'Usuário atualizado com sucesso');
-
     } catch (error) {
       authLogger.error('Erro ao atualizar usuário:', error);
       responseHelper.serverError(reply, 'Erro interno ao atualizar usuário');
@@ -631,9 +627,9 @@ export class AuthController {
     try {
       const { id } = request.params;
 
-      authLogger.info('Admin deletando usuário', { 
+      authLogger.info('Admin deletando usuário', {
         adminId: request.user!.id,
-        targetUserId: id
+        targetUserId: id,
       });
 
       // Verificar se usuário existe
@@ -644,7 +640,12 @@ export class AuthController {
 
       // Não permitir que admin delete a si mesmo
       if (id === request.user!.id) {
-        return responseHelper.error(reply, 'Você não pode deletar sua própria conta', 400, 'CANNOT_DELETE_SELF');
+        return responseHelper.error(
+          reply,
+          'Você não pode deletar sua própria conta',
+          400,
+          'CANNOT_DELETE_SELF'
+        );
       }
 
       // Deletar usuário
@@ -655,7 +656,6 @@ export class AuthController {
       }
 
       responseHelper.deleted(reply, 'Usuário deletado com sucesso');
-
     } catch (error) {
       authLogger.error('Erro ao deletar usuário:', error);
       responseHelper.serverError(reply, 'Erro interno ao deletar usuário');

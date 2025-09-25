@@ -1,3 +1,4 @@
+//apps/backend/src/entities/event-type.entity.ts
 import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import {
   Column,
@@ -24,7 +25,13 @@ export class EventType {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   display_units!: string;
-
+  @Column({
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+    comment: 'Classificação de negócio do evento',
+  })
+  classification!: string | null;
   @Column({ type: 'jsonb', nullable: true, comment: 'Payload original completo da API' })
   raw_data!: object;
 

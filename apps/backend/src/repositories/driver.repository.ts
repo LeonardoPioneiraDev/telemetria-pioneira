@@ -20,6 +20,10 @@ export class DriverRepository extends BaseRepository<Driver> {
     });
   }
 
+  public async findById(id: number): Promise<Driver | null> {
+    return this.repository.findOneBy({ id });
+  }
+
   /**
    * Atualiza um motorista existente com base em seu ID externo.
    */
