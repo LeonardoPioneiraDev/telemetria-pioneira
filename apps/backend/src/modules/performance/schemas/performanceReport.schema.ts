@@ -31,14 +31,14 @@ export const performanceReportResponseSchema = z.object({
         id: z.string(),
         label: z.string(),
         startDate: z.string(),
-        endDate: z.string().optional(),
-        date: z.string().optional(),
+        endDate: z.string(),
+        date: z.string(),
       })
     ),
     metrics: z.array(
       z.object({
         eventType: z.string(),
-        counts: z.record(z.string(), z.number()), // ✅ MUDANÇA: z.record precisa de key type
+        counts: z.record(z.string(), z.number()),
       })
     ),
     totalEvents: z.number(),
