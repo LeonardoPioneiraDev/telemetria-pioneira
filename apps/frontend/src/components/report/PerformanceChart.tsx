@@ -17,16 +17,15 @@ interface PerformanceChartProps {
   metrics: PerformanceMetric[];
 }
 
-// Cores modernas que combinam com shadcn/ui
 const COLORS = [
-  '#3b82f6', // blue-500
-  '#10b981', // emerald-500
-  '#f59e0b', // amber-500
-  '#ef4444', // red-500
-  '#8b5cf6', // violet-500
-  '#06b6d4', // cyan-500
-  '#f97316', // orange-500
-  '#84cc16', // lime-500
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#ef4444',
+  '#8b5cf6',
+  '#06b6d4',
+  '#f97316',
+  '#84cc16',
 ];
 
 const formatXAxisLabel = (label: string) => {
@@ -36,25 +35,29 @@ const formatXAxisLabel = (label: string) => {
   return label.replace(/(\d{2})\.(\d{2})\.\d{4}/, '$1/$2');
 };
 
-// Custom tooltip para combinar com o tema shadcn/ui
-const CustomTooltip = ({ active, payload, label }: any) => {
-  if (active && payload && payload.length) {
-    return (
-      <div className="bg-background border border-border rounded-lg shadow-lg p-3">
-        <p className="font-medium text-foreground mb-2">{label}</p>
-        {payload.map((entry: any, index: number) => (
-          <p key={index} className="text-sm" style={{ color: entry.color }}>
-            <span className="font-medium">{entry.dataKey}:</span> {entry.value}
+const CustomTooltipInverted = ({ active, payload, label, periodColors }: any) => {
+  if (!active || !payload) return null;
+
+  return (
+    <div className="bg-background border border-border rounded-lg shadow-lg p-3">
+      <p className="font-medium text-foreground mb-2">{label}</p>
+      {payload.map((entry: any) => (
+        <div key={entry.name} className="flex items-center gap-2">
+          <div
+            className="w-3 h-3 rounded-sm"
+            style={{ backgroundColor: periodColors[entry.name] }}
+          />
+          <p className="text-sm">
+            <span className="font-medium">{formatXAxisLabel(entry.name)}:</span>
+            {' ' + entry.value}
           </p>
-        ))}
-      </div>
-    );
-  }
-  return null;
+        </div>
+      ))}
+    </div>
+  );
 };
 
 export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) => {
-  // FILTRAR PERÍODOS QUE TÊM PELO MENOS UMA OCORRÊNCIA
   const periodsWithData = periods.filter(period => {
     const totalForPeriod = metrics.reduce((sum, metric) => {
       return sum + (metric.counts[period.id] ?? 0);
@@ -62,7 +65,6 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
     return totalForPeriod > 0;
   });
 
-  // FILTRAR MÉTRICAS QUE TÊM PELO MENOS UMA OCORRÊNCIA
   const metricsWithData = metrics.filter(metric => {
     const totalForMetric = Object.values(metric.counts).reduce((sum, count) => {
       return sum + (count ?? 0);
@@ -70,7 +72,6 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
     return totalForMetric > 0;
   });
 
-  // Se não há dados, mostrar mensagem
   if (periodsWithData.length === 0 || metricsWithData.length === 0) {
     return (
       <Card>
@@ -92,100 +93,75 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
     );
   }
 
-  // ORDENAR PERÍODOS CRONOLOGICAMENTE (se possível)
   const sortedPeriodsWithData = [...periodsWithData].sort((a, b) => {
-    // Tentar extrair datas para ordenação
     const extractDate = (label: string) => {
       const match = label.match(/(\d{2})\.(\d{2})\.(\d{4})/);
       if (match) {
         const [, day, month, year] = match;
         return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       }
-      return new Date(0); // fallback
+      return new Date(0);
     };
 
     return extractDate(a.label).getTime() - extractDate(b.label).getTime();
   });
 
-  const chartData = sortedPeriodsWithData.map(period => {
-    const dataPoint: { name: string; [key: string]: string | number } = {
-      name: formatXAxisLabel(period.label),
+  const chartData = metricsWithData.map(metric => {
+    const dataPoint: { name: string; [key: string]: number } = {
+      name: metric.eventType.replace('(Tr) ', ''),
     };
 
-    metricsWithData.forEach(metric => {
-      const value = metric.counts[period.id] ?? 0;
-      dataPoint[metric.eventType] = value;
+    sortedPeriodsWithData.forEach(period => {
+      dataPoint[period.label] = metric.counts[period.id] || 0;
     });
 
     return dataPoint;
   });
 
-  console.log('🔍 Chart Data:', chartData);
-  console.log(
-    '🔍 Periods with data:',
-    sortedPeriodsWithData.map(p => `${p.id}: ${p.label}`)
-  );
-  console.log(
-    '🔍 Metrics with data:',
-    metricsWithData.map(m => m.eventType)
+  const periodColors = sortedPeriodsWithData.reduce(
+    (acc, period, index) => ({
+      ...acc,
+      [period.label]: COLORS[index % COLORS.length],
+    }),
+    {}
   );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Gráfico de Ocorrências</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Visualização das métricas ao longo dos períodos analisados
-        </p>
-        <div className="text-xs text-muted-foreground mt-2">
-          Exibindo {metricsWithData.length} métricas • {sortedPeriodsWithData.length} períodos
-        </div>
+        <CardTitle className="text-xl">Gráfico de eventos</CardTitle>
+        <p className="text-sm text-muted-foreground">Eventos por métrica ao longo dos períodos</p>
       </CardHeader>
       <CardContent>
-        <div className="h-[450px] w-full">
+        <div className="h-[650px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-              barCategoryGap="20%"
+              layout="vertical"
+              margin={{ left: 80, right: 30, top: 20, bottom: 80 }}
+              barCategoryGap={10}
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="hsl(var(--muted-foreground))"
-                opacity={0.3}
-              />
-              <XAxis
-                dataKey="name"
-                angle={-45}
-                textAnchor="end"
-                height={80}
-                interval={0}
-                fontSize={12}
-                stroke="hsl(var(--muted-foreground))"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-              />
-              <YAxis
-                allowDecimals={false}
-                fontSize={12}
-                stroke="hsl(var(--muted-foreground))"
-                tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                domain={[0, 'dataMax + 1']}
-              />
-              <Tooltip content={<CustomTooltip />} />
+              <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+              <YAxis dataKey="name" type="category" width={150} tick={{ fontSize: 12 }} />
+              <XAxis type="number" allowDecimals={false} />
+              <Tooltip content={<CustomTooltipInverted periodColors={periodColors} />} />
               <Legend
-                wrapperStyle={{
-                  paddingTop: '20px',
-                  color: 'hsl(var(--foreground))',
-                }}
+                wrapperStyle={{ paddingTop: '10px' }}
+                formatter={value => formatXAxisLabel(value)}
               />
-              {metricsWithData.map((metric, index) => (
+              {sortedPeriodsWithData.map(period => (
                 <Bar
-                  key={metric.eventType}
-                  dataKey={metric.eventType}
-                  fill={COLORS[index % COLORS.length]}
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={60}
-                  minPointSize={2}
+                  key={period.label}
+                  dataKey={period.label}
+                  fill={periodColors[period.label]}
+                  radius={[0, 4, 4, 0]}
+                  label={{
+                    position: 'right',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                    fill: 'black',
+                    formatter: (value: number) => (value > 0 ? value : ''),
+                  }}
                 />
               ))}
             </BarChart>
