@@ -2,10 +2,14 @@
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
+  dateRangeQuerySchema,
   performanceReportParamsSchema,
   performanceReportQuerySchema,
 } from '../schemas/performanceReport.schema.js';
-import { PerformanceReportService } from '../services/performanceReportService.js';
+import {
+  InvalidDateRangeError,
+  PerformanceReportService,
+} from '../services/performanceReportService.js';
 
 export class PerformanceReportController {
   private performanceReportService: PerformanceReportService;
@@ -39,7 +43,39 @@ export class PerformanceReportController {
       throw error;
     }
   }
+
+  public async getPerformanceReportByDateRange(
+    request: FastifyRequest<{
+      Params: z.infer<typeof performanceReportParamsSchema>;
+      Querystring: z.infer<typeof dateRangeQuerySchema>;
+    }>,
+    reply: FastifyReply
+  ) {
+    try {
+      const { driverId } = request.params;
+      const { startDate, endDate } = request.query;
+
+      const report = await this.performanceReportService.generatePerformanceReportByDateRange(
+        driverId,
+        startDate,
+        endDate
+      );
+
+      return reply.send(report);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message.includes('não encontrado')) {
+          return reply.status(404).send({ message: error.message });
+        }
+        if (error instanceof InvalidDateRangeError) {
+          // ✅ Captura o erro de intervalo de data
+          return reply.status(400).send({ message: error.message });
+        }
+      }
+      throw error;
+    }
+  }
 }
 
 // Exportar schemas para uso nas rotas
-export { performanceReportParamsSchema, performanceReportQuerySchema };
+export { dateRangeQuerySchema, performanceReportParamsSchema, performanceReportQuerySchema };

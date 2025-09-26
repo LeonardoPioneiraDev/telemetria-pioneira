@@ -10,10 +10,14 @@ export const performanceReportQuerySchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
-  periodDays: z.coerce.number().int().min(1).max(90).optional().default(30),
+  periodDays: z.coerce.number().int().min(1).max(365).optional().default(30),
 });
 
-// ✅ SCHEMA CORRIGIDO - MAIS FLEXÍVEL
+export const dateRangeQuerySchema = z.object({
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
 export const performanceReportResponseSchema = z.object({
   driverInfo: z.object({
     id: z.number(),

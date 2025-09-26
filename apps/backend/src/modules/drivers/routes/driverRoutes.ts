@@ -1,17 +1,18 @@
-//apps/backend/src/modules/drivers/routes/driverRoutes.ts
+// apps/backend/src/modules/drivers/routes/driverRoutes.ts
 import {
   InfractionController,
   infractionsParamsSchema,
 } from '@/modules/infractions/controllers/infractionController.js';
 import {
+  dateRangeQuerySchema,
   PerformanceReportController,
   performanceReportParamsSchema,
   performanceReportQuerySchema,
 } from '@/modules/performance/controllers/performanceReportController.js';
+import { performanceReportResponseSchema } from '@/modules/performance/schemas/performanceReport.schema.js';
 import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { DriverController, searchQuerySchema } from '../controllers/driverController.js';
-import { performanceReportResponseSchema } from '@/modules/performance/schemas/performanceReport.schema.js';
 
 export async function driverRoutes(fastify: FastifyInstance) {
   const driverController = new DriverController();
@@ -21,7 +22,6 @@ export async function driverRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/drivers',
     {
-      // Protege a rota, exigindo que o usuário esteja logado
       preHandler: [fastify.authenticate],
       schema: {
         description: 'Busca motoristas por nome.',
@@ -75,7 +75,8 @@ export async function driverRoutes(fastify: FastifyInstance) {
     {
       preHandler: [fastify.authenticate],
       schema: {
-        description: 'Gera relatório de performance de um motorista para geração de formulário.',
+        description:
+          'Gera relatório de performance de um motorista para geração de formulário, baseado em uma data de referência e janela de dias (pra trás).',
         tags: ['Drivers', 'Performance'],
         params: performanceReportParamsSchema,
         querystring: performanceReportQuerySchema,
@@ -86,5 +87,25 @@ export async function driverRoutes(fastify: FastifyInstance) {
       },
     },
     performanceReportController.getPerformanceReport.bind(performanceReportController)
+  );
+
+  // ✅ NOVA ROTA: Endpoint para buscar relatório por intervalo de datas
+  fastify.get(
+    '/drivers/:driverId/performance-report/range',
+    {
+      preHandler: [fastify.authenticate],
+      schema: {
+        description:
+          'Gera relatório de performance de um motorista para geração de formulário, pesquisando entre uma data inicial e final.',
+        tags: ['Drivers', 'Performance'],
+        params: performanceReportParamsSchema, // driverId
+        querystring: dateRangeQuerySchema, // startDate, endDate
+        response: {
+          200: performanceReportResponseSchema, // O mesmo schema de resposta do relatório existente
+        },
+        security: [{ bearerAuth: [] }],
+      },
+    },
+    performanceReportController.getPerformanceReportByDateRange.bind(performanceReportController)
   );
 }
