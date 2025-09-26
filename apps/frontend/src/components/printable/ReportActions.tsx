@@ -1,4 +1,5 @@
 'use client';
+import { LOGO_BASE64 } from '@/assets/images/logoBase64';
 import { Button } from '@/components/ui/button';
 import { DriverInfo, PerformanceSummary, ReportDetails } from '@/types/api';
 import { Download, FileText, Printer } from 'lucide-react';
@@ -44,9 +45,9 @@ export const ReportActions = ({
       return '<p style="text-align: center; color: #6b7280; font-style: italic; padding: 20px;">Nenhuma ocorrência para exibir no gráfico.</p>';
     }
 
-    const width = 700;
-    const height = 300;
-    const margin = { top: 20, right: 30, left: 40, bottom: 80 };
+    const width = 800;
+    const height = 350;
+    const margin = { top: 35, right: 30, left: 40, bottom: 80 };
     const chartWidth = width - margin.left - margin.right;
     const chartHeight = height - margin.top - margin.bottom;
 
@@ -87,7 +88,7 @@ export const ReportActions = ({
       <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
         <style>
           .chart-text { font-family: Arial, sans-serif; font-size: 12px; fill: #374151; }
-          .chart-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #111827; }
+          .chart-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #111827; padding: 10px;}
           .axis-line { stroke: #d1d5db; stroke-width: 1; }
           .grid-line { stroke: #f3f4f6; stroke-width: 1; }
         </style>
@@ -204,13 +205,22 @@ export const ReportActions = ({
             max-width: 800px;
             margin: 0 auto;
             background: white;
-            padding: 30px;
+            padding: 5px;
           }
           .header {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            justify-content: center;
+            }
+          .header-image {
+            height: 80px; 
+            margin-right: 10px;
+            background-color: #111111;
+            border-radius: 50%;
+          }
+          .header-content {
             text-align: center;
-            margin-bottom: 30px;
-            border-bottom: 2px solid #d1d5db;
-            padding-bottom: 15px;
           }
           .header h1 {
             font-size: 22px;
@@ -378,6 +388,7 @@ export const ReportActions = ({
             font-size: 10px;
             color: #6b7280;
           }
+            
           
           @media print {
             body { margin: 0; padding: 0; }
@@ -391,11 +402,15 @@ export const ReportActions = ({
       <body>
         <div class="container">
           <div class="header">
-            <h1>FORMULÁRIO DE ORIENTAÇÃO</h1>
-            <h2>SISTEMA DE TELEMETRIA VEICULAR</h2>
-            <p>Controle de Desempenho e Segurança na Condução</p>
+           <div>
+            <img src="${LOGO_BASE64}" class="header-image" alt="Logo da Empresa"/>
+           </div>
+            <div class="header-content">
+              <h1>FORMULÁRIO DE ORIENTAÇÃO</h1>
+              <h2>VIAÇÃO PIONEIRA - SISTEMA DE TELEMETRIA VEICULAR</h2>
+              <p>Controle de Desempenho e Segurança na Condução</p>
+            </div>
           </div>
-
           <div class="grid-2">
             <div>
               <div class="field">
@@ -490,22 +505,12 @@ export const ReportActions = ({
           `
               : ''
           }
-
-      
           <div class="section">
             <h3>ORIENTAÇÃO REALIZADA</h3>
             <div class="text-box">
               ${reportDetails.acknowledgmentText}
             </div>
           </div>
-
-          <div class="section">
-            <h3>OBSERVAÇÕES ADICIONAIS</h3>
-            <div class="observations">
-              (Espaço para anotações específicas sobre a orientação realizada)
-            </div>
-          </div>
-
           <div class="signatures">
             <div class="signature">
               <div class="signature-line">
