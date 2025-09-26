@@ -1,3 +1,4 @@
+//apps/frontend/src/components/printable/ReportActions.tsx
 'use client';
 import { LOGO_BASE64 } from '@/assets/images/logoBase64';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,40 @@ export const ReportActions = ({
     return label.replace(/(\d{2})\.(\d{2})\.\d{4}/, '$1/$2');
   };
 
+  const wrapText = (text: string, maxWidth: number, fontSize: number = 10) => {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    // Aproximação: cada caractere tem ~0.6 da largura do fontSize
+    const charWidth = fontSize * 0.6;
+    const maxChars = Math.floor(maxWidth / charWidth);
+
+    words.forEach(word => {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+
+      if (testLine.length <= maxChars) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          // Palavra muito longa, quebrar ela mesmo
+          lines.push(word.substring(0, maxChars));
+          currentLine = word.substring(maxChars);
+        }
+      }
+    });
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines;
+  };
+  // Gerar SVG do gráfico
+  // Gerar SVG do gráfico
   // Gerar SVG do gráfico
   const generateChartSVG = () => {
     // FILTRAR PERÍODOS QUE TÊM PELO MENOS UMA OCORRÊNCIA
@@ -45,124 +80,191 @@ export const ReportActions = ({
       return '<p style="text-align: center; color: #6b7280; font-style: italic; padding: 20px;">Nenhuma ocorrência para exibir no gráfico.</p>';
     }
 
-    const width = 800;
-    const height = 350;
-    const margin = { top: 35, right: 30, left: 40, bottom: 80 };
+    const width = 900;
+    const margin = { top: 50, right: 150, left: 200, bottom: 40 };
     const chartWidth = width - margin.left - margin.right;
-    const chartHeight = height - margin.top - margin.bottom;
 
-    // Preparar dados do gráfico
-    const chartData = periodsWithData.map(period => {
-      const dataPoint: { name: string; [key: string]: string | number } = {
-        name: formatTableHeader(period.label),
-      };
-      metricsWithData.forEach(metric => {
-        dataPoint[metric.eventType] = metric.counts[period.id] ?? 0;
+    // Calcular altura baseada no número real de barras
+    const barHeight = 12;
+    const barSpacing = 3;
+    const eventSpacing = 15; // Espaço entre grupos de eventos
+
+    // Calcular total de barras que serão exibidas
+    let totalBars = 0;
+    metricsWithData.forEach(metric => {
+      periodsWithData.forEach(period => {
+        if ((metric.counts[period.id] ?? 0) > 0) {
+          totalBars++;
+        }
       });
-      return dataPoint;
     });
 
-    // Encontrar valor máximo para escala Y
-    const maxValue = Math.max(
-      ...chartData.map(d => Math.max(...metricsWithData.map(m => d[m.eventType] as number)))
-    );
-    const yScale = maxValue > 0 ? chartHeight / maxValue : 1;
+    const height =
+      margin.top +
+      margin.bottom +
+      totalBars * (barHeight + barSpacing) +
+      metricsWithData.length * eventSpacing;
+    const chartHeight = height - margin.top - margin.bottom;
 
-    // Cores para as barras
-    const colors = [
-      '#3b82f6',
-      '#10b981',
-      '#f59e0b',
-      '#ef4444',
-      '#8b5cf6',
-      '#06b6d4',
-      '#f97316',
-      '#84cc16',
+    // Encontrar valor máximo para escala X
+    const maxValue = Math.max(
+      ...metricsWithData.map(metric =>
+        Math.max(...periodsWithData.map(period => metric.counts[period.id] ?? 0))
+      )
+    );
+    const xScale = maxValue > 0 ? chartWidth / maxValue : 1;
+
+    // Padrões para diferenciar as datas
+    const patterns = [
+      'solid',
+      'diagonal-lines',
+      'dots',
+      'horizontal-lines',
+      'vertical-lines',
+      'cross-hatch',
     ];
 
-    // Largura das barras
-    const barGroupWidth = chartWidth / chartData.length;
-    const barWidth = Math.min(barGroupWidth / metricsWithData.length - 4, 40);
+    let currentY = margin.top; // Posição Y atual
 
     let svgContent = `
-      <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-        <style>
-          .chart-text { font-family: Arial, sans-serif; font-size: 12px; fill: #374151; }
-          .chart-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #111827; padding: 10px;}
-          .axis-line { stroke: #d1d5db; stroke-width: 1; }
-          .grid-line { stroke: #f3f4f6; stroke-width: 1; }
-        </style>
-        
-        <!-- Título -->
-        <text x="${width / 2}" y="15" text-anchor="middle" class="chart-title">Gráfico de Ocorrências por Período</text>
-        
-        <!-- Eixos -->
-        <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" class="axis-line"/>
-        <line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" class="axis-line"/>
-        
-        <!-- Linhas de grade Y -->
-        ${Array.from({ length: 6 }, (_, i) => {
-          const y = margin.top + (chartHeight / 5) * i;
-          const value = Math.round(maxValue - (maxValue / 5) * i);
-          return `
-            <line x1="${margin.left}" y1="${y}" x2="${width - margin.right}" y2="${y}" class="grid-line"/>
-            <text x="${margin.left - 5}" y="${y + 4}" text-anchor="end" class="chart-text">${value}</text>
-          `;
-        }).join('')}
-        
-        <!-- Barras -->
-        ${chartData
-          .map((dataPoint, groupIndex) => {
-            const groupX =
-              margin.left +
-              groupIndex * barGroupWidth +
-              (barGroupWidth - barWidth * metricsWithData.length) / 2;
+    <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Padrões para P&B -->
+        <pattern id="diagonal-lines" patternUnits="userSpaceOnUse" width="4" height="4">
+          <path d="M 0,4 l 4,-4 M -1,1 l 2,-2 M 3,5 l 2,-2" stroke="#000" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="dots" patternUnits="userSpaceOnUse" width="6" height="6">
+          <circle cx="3" cy="3" r="1" fill="#000"/>
+        </pattern>
+        <pattern id="horizontal-lines" patternUnits="userSpaceOnUse" width="4" height="4">
+          <path d="M 0,2 l 4,0" stroke="#000" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="vertical-lines" patternUnits="userSpaceOnUse" width="4" height="4">
+          <path d="M 2,0 l 0,4" stroke="#000" stroke-width="0.5"/>
+        </pattern>
+        <pattern id="cross-hatch" patternUnits="userSpaceOnUse" width="4" height="4">
+          <path d="M 0,4 l 4,-4 M -1,1 l 2,-2 M 3,5 l 2,-2" stroke="#000" stroke-width="0.3"/>
+          <path d="M 0,0 l 4,4 M -1,3 l 2,2 M 3,-1 l 2,2" stroke="#000" stroke-width="0.3"/>
+        </pattern>
+      </defs>
+      
+      <style>
+        .chart-text { font-family: Arial, sans-serif; font-size: 11px; fill: #374151; }
+        .chart-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #111827; }
+        .axis-line { stroke: #d1d5db; stroke-width: 1; }
+        .grid-line { stroke: #f3f4f6; stroke-width: 1; }
+        .event-label { font-family: Arial, sans-serif; font-size: 10px; fill: #111827; font-weight: 600; }
+        .value-label { font-family: Arial, sans-serif; font-size: 10px; fill: #111827; font-weight: bold; }
+        .period-label { font-family: Arial, sans-serif; font-size: 9px; fill: #6b7280; }
+      </style>
+      
+      <!-- Título -->
+      <text x="${width / 2}" y="20" text-anchor="middle" class="chart-title">Gráfico de Ocorrências por Evento</text>
+      
+      <!-- Eixos -->
+      <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${height - margin.bottom}" class="axis-line"/>
+      <line x1="${margin.left}" y1="${height - margin.bottom}" x2="${width - margin.right}" y2="${height - margin.bottom}" class="axis-line"/>
+      
+      <!-- Linhas de grade X -->
+      ${Array.from({ length: 6 }, (_, i) => {
+        const x = margin.left + (chartWidth / 5) * i;
+        const value = Math.round((maxValue / 5) * i);
+        return `
+          <line x1="${x}" y1="${margin.top}" x2="${x}" y2="${height - margin.bottom}" class="grid-line"/>
+          <text x="${x}" y="${height - margin.bottom + 15}" text-anchor="middle" class="chart-text">${value}</text>
+        `;
+      }).join('')}
+  `;
 
-            return metricsWithData
-              .map((metric, metricIndex) => {
-                const value = dataPoint[metric.eventType] as number;
-                const barHeight = value * yScale;
-                const x = groupX + metricIndex * barWidth;
-                const y = height - margin.bottom - barHeight;
+    // Gerar grupos de eventos
+    metricsWithData.forEach((metric, eventIndex) => {
+      // Label do evento (posicionado no meio do grupo)
+      const eventStartY = currentY;
 
-                return `
-              <rect x="${x}" y="${y}" width="${barWidth}" height="${barHeight}" 
-                    fill="${colors[metricIndex % colors.length]}" opacity="0.8"/>
-              ${value > 0 ? `<text x="${x + barWidth / 2}" y="${y - 5}" text-anchor="middle" class="chart-text" font-size="10">${value}</text>` : ''}
-            `;
-              })
-              .join('');
-          })
-          .join('')}
-        
-        <!-- Labels do eixo X -->
-        ${chartData
-          .map((dataPoint, index) => {
-            const x = margin.left + index * barGroupWidth + barGroupWidth / 2;
-            const y = height - margin.bottom + 15;
+      // Contar quantas barras este evento terá
+      const eventBarsCount = periodsWithData.filter(
+        period => (metric.counts[period.id] ?? 0) > 0
+      ).length;
+      const eventGroupHeight = eventBarsCount * (barHeight + barSpacing);
 
-            return `
-            <text x="${x}" y="${y}" text-anchor="middle" class="chart-text" transform="rotate(-45, ${x}, ${y})" font-size="10">
-              ${dataPoint.name}
-            </text>
-          `;
-          })
-          .join('')}
-        
-        <!-- Legenda -->
-        ${metricsWithData
-          .map((metric, index) => {
-            const legendY = height - 15;
-            const legendX = 50 + index * 120;
+      // QUEBRA AUTOMÁTICA DO TEXTO
+      const maxLabelWidth = margin.left - 20; // Largura disponível para o texto
+      const textLines = wrapText(metric.eventType, maxLabelWidth, 10);
+      const lineHeight = 12;
+      const totalTextHeight = textLines.length * lineHeight;
 
-            return `
-            <rect x="${legendX}" y="${legendY - 8}" width="12" height="12" fill="${colors[index % colors.length]}"/>
-            <text x="${legendX + 16}" y="${legendY}" class="chart-text" font-size="10">${metric.eventType.length > 15 ? metric.eventType.substring(0, 15) + '...' : metric.eventType}</text>
-          `;
-          })
-          .join('')}
-      </svg>
+      // Centralizar o texto verticalmente no grupo
+      const textStartY = eventStartY + (eventGroupHeight - totalTextHeight) / 2 + lineHeight;
+
+      // Gerar múltiplas linhas de texto
+      textLines.forEach((line, lineIndex) => {
+        const lineY = textStartY + lineIndex * lineHeight;
+        svgContent += `
+      <!-- Label do evento (linha ${lineIndex + 1}) -->
+      <text x="${margin.left - 10}" y="${lineY}" text-anchor="end" class="event-label">
+        ${line}
+      </text>
     `;
+      });
+
+      // Gerar barras para cada período deste evento
+      periodsWithData.forEach((period, periodIndex) => {
+        const value = metric.counts[period.id] ?? 0;
+        if (value === 0) return;
+
+        const barWidth = value * xScale;
+        const barY = currentY;
+        const barX = margin.left;
+
+        // Determinar padrão baseado no período
+        const pattern = patterns[periodIndex % patterns.length];
+        const fill = pattern === 'solid' ? '#666666' : `url(#${pattern})`;
+
+        svgContent += `
+        <!-- Barra -->
+        <rect x="${barX}" y="${barY}" width="${barWidth}" height="${barHeight}" 
+              fill="${fill}" stroke="#333" stroke-width="0.5"/>
+        
+        <!-- Valor (direita da barra) -->
+        <text x="${barX + barWidth + 5}" y="${barY + barHeight / 2 + 3}" text-anchor="start" class="value-label">
+          ${value}
+        </text>
+        
+        <!-- Data do período (ao lado do valor) -->
+        <text x="${barX + barWidth + 25}" y="${barY + barHeight / 2 + 3}" text-anchor="start" class="period-label">
+          (${formatTableHeader(period.label)})
+        </text>
+      `;
+
+        currentY += barHeight + barSpacing;
+      });
+
+      // Adicionar espaço entre grupos de eventos
+      currentY += eventSpacing;
+    });
+
+    // Adicionar legenda
+    svgContent += `
+    <!-- Legenda de padrões -->
+    <text x="${width - margin.right + 10}" y="${margin.top + 10}" class="chart-text" font-weight="bold">Períodos:</text>
+    ${periodsWithData
+      .map((period, index) => {
+        const legendY = margin.top + 30 + index * 20;
+        const legendX = width - margin.right + 10;
+        const pattern = patterns[index % patterns.length];
+        const fill = pattern === 'solid' ? '#666666' : `url(#${pattern})`;
+
+        return `
+          <rect x="${legendX}" y="${legendY - 8}" width="15" height="12" fill="${fill}" stroke="#333" stroke-width="0.5"/>
+          <text x="${legendX + 20}" y="${legendY}" class="chart-text" font-size="9">
+            ${formatTableHeader(period.label)}
+          </text>
+        `;
+      })
+      .join('')}
+    
+    </svg>
+  `;
 
     return svgContent;
   };
@@ -212,6 +314,7 @@ export const ReportActions = ({
             flex-direction: row;
             align-items: center;
             justify-content: center;
+            margin-bottom: 40px;
             }
           .header-image {
             height: 80px; 
@@ -243,6 +346,7 @@ export const ReportActions = ({
             grid-template-columns: 1fr 1fr;
             gap: 24px;
             margin-bottom: 20px;
+            margin-top: 20px;
           }
           .field {
             border-bottom: 1px solid #d1d5db;
@@ -266,7 +370,7 @@ export const ReportActions = ({
             color: #dc2626;
           }
           .section {
-            margin-bottom: 25px;
+            margin-bottom: 35px;
           }
           .section h3 {
             font-size: 16px;
