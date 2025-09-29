@@ -1,11 +1,11 @@
-import { userModel, User, CreateUserData } from '../models/User.js';
-import { passwordService } from '../../../shared/utils/password.js';
-import { jwtService } from '../../../shared/utils/jwt.js';
-import { emailService } from './emailService.js';
-import { logger, authLogger, securityLogger } from '../../../shared/utils/logger.js';
 import { environment } from '../../../config/environment.js';
-import { USER_STATUS, USER_ROLES } from '../../../shared/constants/index.js';
 import type { UserRole, UserStatus } from '../../../shared/constants/index.js';
+import { USER_ROLES, USER_STATUS } from '../../../shared/constants/index.js';
+import { jwtService } from '../../../shared/utils/jwt.js';
+import { authLogger, logger, securityLogger } from '../../../shared/utils/logger.js';
+import { passwordService } from '../../../shared/utils/password.js';
+import { CreateUserData, User, userModel } from '../models/User.js';
+import { emailService } from './emailService.js';
 
 export interface LoginCredentials {
   email: string;
@@ -90,7 +90,7 @@ export class AuthService {
         password: registerData.password,
         role: USER_ROLES.USER,
         status: environment.email.enabled ? USER_STATUS.PENDING : USER_STATUS.ACTIVE,
-        emailVerified: !environment.email.enabled
+        emailVerified: !environment.email.enabled,
       };
 
       const user = await userModel.create(userData);
@@ -100,13 +100,13 @@ export class AuthService {
         try {
           await emailService.sendWelcomeEmail(user.email, {
             name: user.fullName,
-            username: user.username
+            username: user.username,
           });
           authLogger.info('Email de boas-vindas enviado', { userId: user.id });
         } catch (emailError) {
-          authLogger.warn('Falha ao enviar email de boas-vindas', { 
-            userId: user.id, 
-            error: emailError 
+          authLogger.warn('Falha ao enviar email de boas-vindas', {
+            userId: user.id,
+            error: emailError,
           });
         }
       }
@@ -114,20 +114,138 @@ export class AuthService {
       authLogger.info('Usuário registrado com sucesso', {
         userId: user.id,
         email: user.email,
-        username: user.username
+        username: user.username,
       });
 
       return {
         user: this.sanitizeUser(user),
-        message: environment.email.enabled 
+        message: environment.email.enabled
           ? 'Usuário registrado com sucesso. Verifique seu email para ativar a conta.'
-          : 'Usuário registrado com sucesso.'
+          : 'Usuário registrado com sucesso.',
       };
-
     } catch (error) {
       authLogger.error('Erro no registro de usuário:', error);
       throw error;
     }
+  }
+
+  public async createUserByAdmin(userData: {
+    email: string;
+    username: string;
+    fullName: string;
+    password?: string;
+    role: UserRole;
+    status: UserStatus;
+    sendWelcomeEmail?: boolean;
+  }) {
+    // 1. Verificar se email ou username já existem
+    const emailExists = await userModel.emailExists(userData.email);
+    if (emailExists) {
+      throw new Error('Email já está em uso');
+    }
+    const usernameExists = await userModel.usernameExists(userData.username);
+    if (usernameExists) {
+      throw new Error('Nome de usuário já está em uso');
+    }
+
+    let temporaryPassword = userData.password;
+    let wasPasswordGenerated = false;
+
+    // 2. Gerar senha temporária se não foi fornecida
+    if (!temporaryPassword) {
+      temporaryPassword = this.generateTemporaryPassword(); // Precisamos criar este método auxiliar
+      wasPasswordGenerated = true;
+    }
+
+    // 3. Gerar o token de primeiro acesso
+    const firstLoginToken = this.generateFirstLoginToken(); // E este também
+
+    // 4. Preparar dados para salvar no banco
+    const userToCreate: CreateUserData = {
+      email: userData.email,
+      username: userData.username,
+      fullName: userData.fullName,
+      password: temporaryPassword, // A senha (temporária ou definida pelo admin)
+      role: userData.role,
+      status: userData.status,
+      emailVerified: true, // Admin cria usuários já verificados
+    };
+
+    const createdUser = await userModel.create(userToCreate);
+
+    const hashedFirstLoginToken = passwordService.hashResetToken(firstLoginToken);
+
+    const updatedUser = await userModel.update(createdUser.id, {
+      passwordResetToken: hashedFirstLoginToken, // ✅ Agora salva o token criptografado
+      passwordResetExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    });
+
+    if (!updatedUser) {
+      // Se a atualização falhar por algum motivo, deletamos o usuário para evitar inconsistência.
+      await userModel.delete(createdUser.id);
+      throw new Error('Falha ao definir o token de primeiro acesso para o novo usuário.');
+    }
+
+    // 6. Enviar o email de boas-vindas com o link de configuração de senha
+    if (userData.sendWelcomeEmail) {
+      try {
+        await emailService.sendWelcomeEmail(updatedUser.email, {
+          name: updatedUser.fullName,
+          username: updatedUser.username,
+          // Novos campos para o e-mail inteligente
+          firstLoginToken: firstLoginToken,
+          loginUrl: `${environment.frontend.url}/login`,
+        });
+      } catch (emailError) {
+        authLogger.error('Falha ao enviar e-mail de boas-vindas na criação de usuário (admin)', {
+          error: emailError,
+        });
+        // Mesmo com erro no e-mail, a criação do usuário foi um sucesso.
+        // Podemos adicionar um tratamento especial aqui se necessário.
+      }
+    }
+
+    return {
+      user: this.sanitizeUser(updatedUser),
+      temporaryPassword: wasPasswordGenerated ? temporaryPassword : undefined, // Só retorna a senha se ela foi gerada
+    };
+  }
+
+  /**
+   * [NOVO MÉTODO AUXILIAR]
+   * Gera uma senha temporária segura.
+   * Lógica extraída do user.service.ts.
+   */
+  private generateTemporaryPassword(): string {
+    const length = 12;
+    const lowercase = 'abcdefghijklmnopqrstuvwxyz';
+    const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const numbers = '0123456789';
+    const symbols = '!@#$%&*';
+    const allChars = lowercase + uppercase + numbers + symbols;
+    let password = '';
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+    for (let i = password.length; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    return password
+      .split('')
+      .sort(() => Math.random() - 0.5)
+      .join('');
+  }
+
+  /**
+   * [NOVO MÉTODO AUXILIAR]
+   * Gera um token único para o primeiro login.
+   * Lógica extraída do user.service.ts.
+   */
+  private generateFirstLoginToken(): string {
+    const timestamp = Date.now().toString(36);
+    const randomPart = Math.random().toString(36).substring(2, 15);
+    return `first_${timestamp}_${randomPart}`;
   }
 
   /**
@@ -140,9 +258,9 @@ export class AuthService {
       // Buscar usuário por email
       const user = await userModel.findByEmail(credentials.email);
       if (!user) {
-        securityLogger.warn('Tentativa de login com email inexistente', { 
-          email: credentials.email, 
-          ip: ipAddress 
+        securityLogger.warn('Tentativa de login com email inexistente', {
+          email: credentials.email,
+          ip: ipAddress,
         });
         throw new Error('Credenciais inválidas');
       }
@@ -154,7 +272,7 @@ export class AuthService {
           userId: user.id,
           email: user.email,
           unlockTime,
-          ip: ipAddress
+          ip: ipAddress,
         });
         throw new Error(`Conta temporariamente bloqueada. Tente novamente após ${unlockTime}`);
       }
@@ -173,19 +291,22 @@ export class AuthService {
       }
 
       // Verificar senha
-      const isPasswordValid = await passwordService.verifyPassword(credentials.password, user.password);
-      
+      const isPasswordValid = await passwordService.verifyPassword(
+        credentials.password,
+        user.password
+      );
+
       if (!isPasswordValid) {
         // Incrementar tentativas de login
         await userModel.incrementLoginAttempts(user.id);
-        
+
         securityLogger.warn('Tentativa de login com senha incorreta', {
           userId: user.id,
           email: user.email,
           attempts: user.loginAttempts + 1,
-          ip: ipAddress
+          ip: ipAddress,
         });
-        
+
         throw new Error('Credenciais inválidas');
       }
 
@@ -200,20 +321,19 @@ export class AuthService {
         username: user.username,
         role: user.role,
         permissions: userPermissions,
-        tokenVersion: user.tokenVersion
+        tokenVersion: user.tokenVersion,
       });
 
       authLogger.info('Login realizado com sucesso', {
         userId: user.id,
         email: user.email,
-        ip: ipAddress
+        ip: ipAddress,
       });
 
       return {
         user: this.sanitizeUser(user),
-        ...tokens
+        ...tokens,
       };
-
     } catch (error) {
       authLogger.error('Erro no login:', error);
       throw error;
@@ -254,16 +374,15 @@ export class AuthService {
         email: user.email,
         username: user.username,
         role: user.role,
-        permissions: userPermissions
+        permissions: userPermissions,
       });
 
       authLogger.info('Token renovado com sucesso', { userId: user.id });
 
       return {
         accessToken,
-        expiresIn: environment.jwt.expiresIn
+        expiresIn: environment.jwt.expiresIn,
       };
-
     } catch (error) {
       authLogger.error('Erro ao renovar token:', error);
       throw error;
@@ -280,7 +399,10 @@ export class AuthService {
       const user = await userModel.findByEmail(data.email);
       if (!user) {
         // Por segurança, sempre retornar sucesso mesmo se email não existir
-        return { message: 'Se o email existir em nossa base, você receberá instruções para redefinir sua senha' };
+        return {
+          message:
+            'Se o email existir em nossa base, você receberá instruções para redefinir sua senha',
+        };
       }
 
       // Gerar token de reset
@@ -291,7 +413,7 @@ export class AuthService {
       // Salvar token no banco
       await userModel.update(user.id, {
         passwordResetToken: hashedToken,
-        passwordResetExpires: expiresAt
+        passwordResetExpires: expiresAt,
       });
 
       // Enviar email se habilitado
@@ -300,20 +422,22 @@ export class AuthService {
           await emailService.sendPasswordResetEmail(user.email, {
             name: user.fullName,
             resetToken,
-            expiresIn: '1 hora'
+            expiresIn: '1 hora',
           });
           authLogger.info('Email de reset de senha enviado', { userId: user.id });
         } catch (emailError) {
-          authLogger.error('Falha ao enviar email de reset', { 
-            userId: user.id, 
-            error: emailError 
+          authLogger.error('Falha ao enviar email de reset', {
+            userId: user.id,
+            error: emailError,
           });
           throw new Error('Falha ao enviar email de recuperação');
         }
       }
 
-      return { message: 'Se o email existir em nossa base, você receberá instruções para redefinir sua senha' };
-
+      return {
+        message:
+          'Se o email existir em nossa base, você receberá instruções para redefinir sua senha',
+      };
     } catch (error) {
       authLogger.error('Erro na solicitação de reset de senha:', error);
       throw error;
@@ -336,11 +460,16 @@ export class AuthService {
       // Validar nova senha
       const passwordValidation = passwordService.validatePassword(data.newPassword);
       if (!passwordValidation.isValid) {
-        throw new Error(`Nova senha não atende aos critérios: ${passwordValidation.errors.join(', ')}`);
+        throw new Error(
+          `Nova senha não atende aos critérios: ${passwordValidation.errors.join(', ')}`
+        );
       }
 
       // Verificar se nova senha é diferente da atual
-      const isDifferent = await passwordService.isPasswordDifferent(data.newPassword, user.password);
+      const isDifferent = await passwordService.isPasswordDifferent(
+        data.newPassword,
+        user.password
+      );
       if (!isDifferent) {
         throw new Error('A nova senha deve ser diferente da senha atual');
       }
@@ -353,20 +482,22 @@ export class AuthService {
         password: hashedPassword,
         passwordResetToken: undefined,
         passwordResetExpires: undefined,
-        tokenVersion: user.tokenVersion + 1 // Invalidar todos os tokens existentes
+        tokenVersion: user.tokenVersion + 1, // Invalidar todos os tokens existentes
       });
 
       // Enviar email de confirmação se habilitado
       if (environment.email.enabled) {
         try {
           await emailService.sendPasswordChangedEmail(user.email, {
-            name: user.fullName
+            name: user.fullName,
           });
-          authLogger.info('Email de confirmação de alteração de senha enviado', { userId: user.id });
+          authLogger.info('Email de confirmação de alteração de senha enviado', {
+            userId: user.id,
+          });
         } catch (emailError) {
-          authLogger.warn('Falha ao enviar email de confirmação', { 
-            userId: user.id, 
-            error: emailError 
+          authLogger.warn('Falha ao enviar email de confirmação', {
+            userId: user.id,
+            error: emailError,
           });
         }
       }
@@ -374,7 +505,6 @@ export class AuthService {
       authLogger.info('Senha resetada com sucesso', { userId: user.id });
 
       return { message: 'Senha alterada com sucesso' };
-
     } catch (error) {
       authLogger.error('Erro no reset de senha:', error);
       throw error;
@@ -384,7 +514,10 @@ export class AuthService {
   /**
    * Alterar senha (usuário logado)
    */
-  public async changePassword(userId: string, data: ChangePasswordData): Promise<{ message: string }> {
+  public async changePassword(
+    userId: string,
+    data: ChangePasswordData
+  ): Promise<{ message: string }> {
     try {
       authLogger.info('Tentativa de alteração de senha', { userId });
 
@@ -395,7 +528,10 @@ export class AuthService {
       }
 
       // Verificar senha atual
-      const isCurrentPasswordValid = await passwordService.verifyPassword(data.currentPassword, user.password);
+      const isCurrentPasswordValid = await passwordService.verifyPassword(
+        data.currentPassword,
+        user.password
+      );
       if (!isCurrentPasswordValid) {
         throw new Error('Senha atual incorreta');
       }
@@ -403,11 +539,16 @@ export class AuthService {
       // Validar nova senha
       const passwordValidation = passwordService.validatePassword(data.newPassword);
       if (!passwordValidation.isValid) {
-        throw new Error(`Nova senha não atende aos critérios: ${passwordValidation.errors.join(', ')}`);
+        throw new Error(
+          `Nova senha não atende aos critérios: ${passwordValidation.errors.join(', ')}`
+        );
       }
 
       // Verificar se nova senha é diferente da atual
-      const isDifferent = await passwordService.isPasswordDifferent(data.newPassword, user.password);
+      const isDifferent = await passwordService.isPasswordDifferent(
+        data.newPassword,
+        user.password
+      );
       if (!isDifferent) {
         throw new Error('A nova senha deve ser diferente da senha atual');
       }
@@ -418,20 +559,20 @@ export class AuthService {
       // Atualizar senha
       await userModel.update(userId, {
         password: hashedPassword,
-        tokenVersion: user.tokenVersion + 1 // Invalidar todos os tokens existentes
+        tokenVersion: user.tokenVersion + 1, // Invalidar todos os tokens existentes
       });
 
       // Enviar email de confirmação se habilitado
       if (environment.email.enabled) {
         try {
           await emailService.sendPasswordChangedEmail(user.email, {
-            name: user.fullName
+            name: user.fullName,
           });
           authLogger.info('Email de confirmação de alteração de senha enviado', { userId });
         } catch (emailError) {
-          authLogger.warn('Falha ao enviar email de confirmação', { 
-            userId, 
-            error: emailError 
+          authLogger.warn('Falha ao enviar email de confirmação', {
+            userId,
+            error: emailError,
           });
         }
       }
@@ -439,7 +580,6 @@ export class AuthService {
       authLogger.info('Senha alterada com sucesso', { userId });
 
       return { message: 'Senha alterada com sucesso' };
-
     } catch (error) {
       authLogger.error('Erro na alteração de senha:', error);
       throw error;
@@ -457,7 +597,6 @@ export class AuthService {
       authLogger.info('Logout realizado com sucesso', { userId });
 
       return { message: 'Logout realizado com sucesso' };
-
     } catch (error) {
       authLogger.error('Erro no logout:', error);
       throw error;
@@ -475,7 +614,6 @@ export class AuthService {
       }
 
       return this.sanitizeUser(user);
-
     } catch (error) {
       authLogger.error('Erro ao obter perfil:', error);
       throw error;
@@ -485,11 +623,14 @@ export class AuthService {
   /**
    * Atualizar perfil do usuário
    */
-  public async updateProfile(userId: string, updateData: {
-    fullName?: string;
-    username?: string;
-    email?: string;
-  }): Promise<Omit<User, 'password'>> {
+  public async updateProfile(
+    userId: string,
+    updateData: {
+      fullName?: string;
+      username?: string;
+      email?: string;
+    }
+  ): Promise<Omit<User, 'password'>> {
     try {
       authLogger.info('Atualizando perfil do usuário', { userId, fields: Object.keys(updateData) });
 
@@ -520,7 +661,6 @@ export class AuthService {
       authLogger.info('Perfil atualizado com sucesso', { userId });
 
       return this.sanitizeUser(updatedUser);
-
     } catch (error) {
       authLogger.error('Erro ao atualizar perfil:', error);
       throw error;

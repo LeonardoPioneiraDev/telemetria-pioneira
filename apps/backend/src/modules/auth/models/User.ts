@@ -1,8 +1,8 @@
 import { database } from '../../../config/database.js';
+import type { UserPermission, UserRole, UserStatus } from '../../../shared/constants/index.js';
+import { ROLE_PERMISSIONS, USER_ROLES, USER_STATUS } from '../../../shared/constants/index.js';
 import { logger } from '../../../shared/utils/logger.js';
 import { passwordService } from '../../../shared/utils/password.js';
-import { USER_ROLES, USER_STATUS, ROLE_PERMISSIONS } from '../../../shared/constants/index.js';
-import type { UserRole, UserStatus, UserPermission } from '../../../shared/constants/index.js';
 
 export interface User {
   id: string;
@@ -87,13 +87,17 @@ export class UserModel {
   public async create(userData: CreateUserData): Promise<User> {
     try {
       const hashedPassword = await passwordService.hashPassword(userData.password);
-      
-      const query = `
-        INSERT INTO users (
-          email, username, full_name, password, role, status, email_verified, token_version
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-        RETURNING *
-      `;
+
+      const columns = [
+        'email',
+        'username',
+        'full_name',
+        'password',
+        'role',
+        'status',
+        'email_verified',
+        'token_version',
+      ];
 
       const values = [
         userData.email,
@@ -103,8 +107,22 @@ export class UserModel {
         userData.role || USER_ROLES.USER,
         userData.status || USER_STATUS.ACTIVE,
         userData.emailVerified || false,
-        1 // token_version inicial
+        1, // token_version inicial
       ];
+
+      // Lógica para satisfazer a constraint "check_email_verified_consistency"
+      if (userData.emailVerified) {
+        columns.push('email_verified_at');
+        values.push(new Date()); // Adiciona a data e hora atuais
+      }
+
+      const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
+
+      const query = `
+        INSERT INTO users (${columns.join(', ')})
+        VALUES (${placeholders})
+        RETURNING *
+      `;
 
       const result = await database.query(query, values);
       const user = this.mapRowToUser(result.rows[0]);
@@ -112,8 +130,6 @@ export class UserModel {
       logger.info('Usuário criado com sucesso', {
         userId: user.id,
         email: user.email,
-        username: user.username,
-        role: user.role
       });
 
       return user;
@@ -249,7 +265,7 @@ export class UserModel {
 
       logger.info('Usuário atualizado com sucesso', {
         userId: user.id,
-        updatedFields: Object.keys(updateData)
+        updatedFields: Object.keys(updateData),
       });
 
       return user;
@@ -327,9 +343,8 @@ export class UserModel {
         paramIndex++;
       }
 
-      const whereClause = whereConditions.length > 0 
-        ? `WHERE ${whereConditions.join(' AND ')}`
-        : '';
+      const whereClause =
+        whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
 
       // Query para contar total
       const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
@@ -356,7 +371,7 @@ export class UserModel {
         total,
         page,
         limit,
-        totalPages
+        totalPages,
       };
     } catch (error) {
       logger.error('Erro ao listar usuários:', error);
@@ -487,7 +502,7 @@ export class UserModel {
       emailVerificationExpires: row.email_verification_expires,
       tokenVersion: row.token_version,
       createdAt: row.created_at,
-      updatedAt: row.updated_at
+      updatedAt: row.updated_at,
     };
   }
 
