@@ -117,13 +117,10 @@ export async function authRoutes(fastify: FastifyInstance) {
           schema: {
             description: 'Solicitar reset de senha',
             tags: ['Autenticação'],
-            body: {
-              type: 'object',
-              required: ['email'],
-              properties: {
-                email: { type: 'string', format: 'email' },
-              },
-            },
+            // ✅ CORREÇÃO: Convertido para Zod
+            body: z.object({
+              email: z.string().email({ message: 'Por favor, insira um email válido.' }),
+            }),
           },
         },
         authController.requestPasswordReset
