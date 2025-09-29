@@ -732,26 +732,32 @@ export const ReportActions = ({
   };
 
   return (
-    <div className="flex flex-wrap gap-3 p-4 bg-muted/50 rounded-lg border">
+    <div className="flex flex-wrap gap-3 p-4 bg-green-100 rounded-lg border">
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm text-foreground mb-1">Formulário de Orientação</h3>
-        <p className="text-xs text-muted-foreground">
+        <h3 className="font-semibold text-sm text-green-900 mb-1">Formulário de Orientação</h3>
+        <p className="text-xs text-green-800 ">
           Documento oficial com tabela detalhada e gráfico para arquivo do RH
         </p>
       </div>
 
       <div className="flex gap-2">
-        <Button onClick={handleViewForm} variant="outline" size="sm">
+        <Button onClick={handleViewForm} variant="default" size="sm" className="cursor-pointer">
           <FileText className="mr-2 h-4 w-4" />
           Visualizar
         </Button>
 
-        <Button onClick={handlePrintForm} variant="outline" size="sm">
+        <Button onClick={handlePrintForm} variant="outline" size="sm" className="cursor-pointer">
           <Printer className="mr-2 h-4 w-4" />
           Imprimir
         </Button>
 
-        <Button onClick={handleDownloadPDF} variant="outline" size="sm" disabled={isGenerating}>
+        <Button
+          onClick={handleDownloadPDF}
+          variant="outline"
+          size="sm"
+          disabled={isGenerating}
+          className="cursor-pointer"
+        >
           <Download className="mr-2 h-4 w-4" />
           {isGenerating ? 'Gerando...' : 'Baixar PDF'}
         </Button>
