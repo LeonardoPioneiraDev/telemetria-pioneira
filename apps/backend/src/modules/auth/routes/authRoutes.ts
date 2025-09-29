@@ -129,6 +129,36 @@ export async function authRoutes(fastify: FastifyInstance) {
         authController.requestPasswordReset
       );
 
+      /**
+       *  Rota para admin resetar a senha de um usuário
+       */
+      fastify.post(
+        '/users/:id/reset-password-admin',
+        {
+          preHandler: [
+            authMiddleware.authenticate(),
+            // Usamos a permissão de UPDATE, pois é uma ação que modifica o estado do usuário
+            authMiddleware.requirePermission(USER_PERMISSIONS.USER_UPDATE),
+            authValidators.validateId(), // Reutiliza o validador de ID
+          ],
+          schema: {
+            description: 'Forçar a redefinição de senha de um usuário (Admin)',
+            tags: ['Administração'],
+            security: [{ bearerAuth: [] }],
+            params: z.object({
+              id: z.string().uuid({ message: 'O ID do usuário deve ser um UUID válido.' }),
+            }),
+            response: {
+              200: z.object({
+                success: z.boolean(),
+                message: z.string(),
+              }),
+            },
+          },
+        },
+        authController.resetPasswordByAdmin
+      );
+
       // Resetar senha
       fastify.post(
         '/password/reset',

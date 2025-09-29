@@ -552,6 +552,41 @@ export class AuthController {
   }
 
   /**
+   * Admin força a redefinição de senha de um usuário.
+   */
+  public async resetPasswordByAdmin(
+    request: FastifyRequest<{ Params: { id: string } }>,
+    reply: FastifyReply
+  ): Promise<void> {
+    try {
+      const { id: targetUserId } = request.params;
+      const adminId = request.user!.id;
+
+      // Medida de segurança: admin não pode resetar a própria senha por esta rota.
+      if (targetUserId === adminId) {
+        return responseHelper.error(
+          reply,
+          'Você não pode resetar sua própria senha através desta função. Use a opção "Esqueci minha senha".',
+          400,
+          'CANNOT_RESET_SELF'
+        );
+      }
+
+      const result = await authService.initiatePasswordResetByAdmin(targetUserId, adminId);
+
+      responseHelper.success(reply, null, result.message);
+    } catch (error) {
+      authLogger.error('Erro no controller de reset de senha pelo admin:', error);
+
+      if (error instanceof Error && error.message.includes('não encontrado')) {
+        return responseHelper.notFoundError(reply, 'Usuário alvo não encontrado');
+      }
+
+      responseHelper.serverError(reply, 'Erro interno ao tentar resetar a senha do usuário');
+    }
+  }
+
+  /**
    * Atualizar usuário (Admin)
    */
   public async updateUser(

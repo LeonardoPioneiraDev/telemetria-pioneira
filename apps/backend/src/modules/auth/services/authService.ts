@@ -212,7 +212,51 @@ export class AuthService {
   }
 
   /**
-   * [NOVO MÉTODO AUXILIAR]
+   * Inicia a redefinição de senha forçada por um administrador.
+   */
+  public async initiatePasswordResetByAdmin(
+    targetUserId: string,
+    adminId: string
+  ): Promise<{ message: string }> {
+    try {
+      authLogger.info('Admin iniciando reset de senha para usuário', { targetUserId, adminId });
+
+      // 1. Buscar o usuário alvo
+      const user = await userModel.findById(targetUserId);
+      if (!user) {
+        throw new Error('Usuário não encontrado');
+      }
+
+      // 2. Gerar um token seguro para o reset
+      const resetToken = passwordService.generateResetToken();
+      const hashedToken = passwordService.hashResetToken(resetToken);
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // Expira em 24 horas
+
+      // 3. Salvar o token criptografado no banco
+      await userModel.update(user.id, {
+        passwordResetToken: hashedToken,
+        passwordResetExpires: expiresAt,
+      });
+
+      // 4. Enviar o email de "boas-vindas", que contém o link para definir a senha
+      await emailService.sendWelcomeEmail(user.email, {
+        name: user.fullName,
+        username: user.username,
+        firstLoginToken: resetToken, // Passa o token original para o e-mail
+        loginUrl: `${environment.frontend.url}/login`,
+      });
+
+      authLogger.info('Reset de senha iniciado com sucesso pelo admin', { targetUserId, adminId });
+
+      return { message: 'O e-mail para redefinição de senha foi enviado ao usuário.' };
+    } catch (error) {
+      authLogger.error('Erro ao iniciar reset de senha pelo admin:', { error, targetUserId });
+      // Propaga o erro para ser tratado no controller
+      throw error;
+    }
+  }
+
+  /**
    * Gera uma senha temporária segura.
    * Lógica extraída do user.service.ts.
    */
