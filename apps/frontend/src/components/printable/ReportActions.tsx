@@ -81,7 +81,7 @@ export const ReportActions = ({
     }
 
     const width = 900;
-    const margin = { top: 50, right: 150, left: 150, bottom: 40 };
+    const margin = { top: 50, right: 150, left: 90, bottom: 40 };
     const chartWidth = 500;
 
     // Calcular altura baseada no número real de barras
@@ -304,7 +304,7 @@ export const ReportActions = ({
             line-height: 1.4;
           }
           .container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
             background: white;
             padding: 5px;
@@ -349,14 +349,14 @@ export const ReportActions = ({
             margin-top: 20px;
           }
           .field {
-            border-bottom: 1px solid #d1d5db;
+            border-bottom: 1px solid #121212;
             padding-bottom: 6px;
             margin-bottom: 12px;
           }
           .field label {
             font-size: 11px;
             font-weight: 600;
-            color: #6b7280;
+            color: #191a1b;
             text-transform: uppercase;
             display: block;
           }
@@ -387,7 +387,7 @@ export const ReportActions = ({
             margin-bottom: 20px;
           }
           .metrics-table th, .metrics-table td {
-            border: 1px solid #d1d5db;
+            border: 1px solid #121212;
             padding: 6px 4px;
             font-size: 14px;
             text-align: center;
@@ -469,7 +469,7 @@ export const ReportActions = ({
             text-align: center;
           }
           .signature-line {
-            border-top: 1px solid #9ca3af;
+            border-top: 1px solid #161617;
             padding-top: 6px;
             margin-top: 40px;
           }
@@ -479,11 +479,11 @@ export const ReportActions = ({
           .signature-title {
             font-size: 12px;
             font-weight: 600;
-            color: #111827;
+            color: #070a11;
           }
           .signature-info {
             font-size: 10px;
-            color: #6b7280;
+            color: #101318;
           }
           .footer {
             text-align: center;
@@ -491,7 +491,7 @@ export const ReportActions = ({
             padding-top: 12px;
             border-top: 1px solid #d1d5db;
             font-size: 10px;
-            color: #6b7280;
+            color: #14161b;
           }
             
           
