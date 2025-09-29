@@ -732,9 +732,9 @@ export const ReportActions = ({
   };
 
   return (
-    <div className="flex flex-wrap gap-3 p-4 bg-green-100 rounded-lg border">
+    <div className="flex flex-wrap gap-3 p-4 bg-green-100 rounded-lg border items-center">
       <div className="flex-1 min-w-0">
-        <h3 className="font-semibold text-sm text-green-900 mb-1">Formulário de Orientação</h3>
+        <h3 className="font-semibold text-base text-green-900 mb-1">Formulário de Orientação</h3>
         <p className="text-xs text-green-800 ">
           Documento oficial com tabela detalhada e gráfico para arquivo do RH
         </p>
