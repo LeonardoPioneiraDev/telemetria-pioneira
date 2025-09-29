@@ -1,3 +1,4 @@
+//apps/frontend/src/components/report/PerformanceChart.tsx
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PerformanceMetric, PerformancePeriod } from '@/types/api';
