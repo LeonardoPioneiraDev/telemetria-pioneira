@@ -25,14 +25,11 @@ export class AuthValidators {
         password: commonSchemas.password,
         username: commonSchemas.username,
         fullName: commonSchemas.name,
-        acceptTerms: Joi.boolean()
-          .valid(true)
-          .required()
-          .messages({
-            'any.only': 'Você deve aceitar os termos de uso',
-            'any.required': 'Aceitação dos termos é obrigatória'
-          })
-      })
+        acceptTerms: Joi.boolean().valid(true).required().messages({
+          'any.only': 'Você deve aceitar os termos de uso',
+          'any.required': 'Aceitação dos termos é obrigatória',
+        }),
+      }),
     });
   }
 
@@ -43,13 +40,11 @@ export class AuthValidators {
     return validationMiddleware.validate({
       body: Joi.object({
         email: commonSchemas.email,
-        password: Joi.string()
-          .required()
-          .messages({
-            'any.required': 'Senha é obrigatória'
-          }),
-        rememberMe: Joi.boolean().default(false)
-      })
+        password: Joi.string().required().messages({
+          'any.required': 'Senha é obrigatória',
+        }),
+        rememberMe: Joi.boolean().default(false),
+      }),
     });
   }
 
@@ -59,8 +54,8 @@ export class AuthValidators {
   public refreshToken() {
     return validationMiddleware.validate({
       body: Joi.object({
-        refreshToken: commonSchemas.token
-      })
+        refreshToken: commonSchemas.token,
+      }),
     });
   }
 
@@ -70,8 +65,8 @@ export class AuthValidators {
   public requestPasswordReset() {
     return validationMiddleware.validate({
       body: Joi.object({
-        email: commonSchemas.email
-      })
+        email: commonSchemas.email,
+      }),
     });
   }
 
@@ -83,14 +78,11 @@ export class AuthValidators {
       body: Joi.object({
         token: commonSchemas.token,
         newPassword: commonSchemas.password,
-        confirmPassword: Joi.string()
-          .valid(Joi.ref('newPassword'))
-          .required()
-          .messages({
-            'any.only': 'Confirmação de senha deve ser igual à nova senha',
-            'any.required': 'Confirmação de senha é obrigatória'
-          })
-      })
+        confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+          'any.only': 'Confirmação de senha deve ser igual à nova senha',
+          'any.required': 'Confirmação de senha é obrigatória',
+        }),
+      }),
     });
   }
 
@@ -100,20 +92,15 @@ export class AuthValidators {
   public changePassword() {
     return validationMiddleware.validate({
       body: Joi.object({
-        currentPassword: Joi.string()
-          .required()
-          .messages({
-            'any.required': 'Senha atual é obrigatória'
-          }),
+        currentPassword: Joi.string().required().messages({
+          'any.required': 'Senha atual é obrigatória',
+        }),
         newPassword: commonSchemas.password,
-        confirmPassword: Joi.string()
-          .valid(Joi.ref('newPassword'))
-          .required()
-          .messages({
-            'any.only': 'Confirmação de senha deve ser igual à nova senha',
-            'any.required': 'Confirmação de senha é obrigatória'
-          })
-      })
+        confirmPassword: Joi.string().valid(Joi.ref('newPassword')).required().messages({
+          'any.only': 'Confirmação de senha deve ser igual à nova senha',
+          'any.required': 'Confirmação de senha é obrigatória',
+        }),
+      }),
     });
   }
 
@@ -125,10 +112,12 @@ export class AuthValidators {
       body: Joi.object({
         fullName: commonSchemas.name.optional(),
         username: commonSchemas.username.optional(),
-        email: commonSchemas.email.optional()
-      }).min(1).messages({
-        'object.min': 'Pelo menos um campo deve ser fornecido para atualização'
+        email: commonSchemas.email.optional(),
       })
+        .min(1)
+        .messages({
+          'object.min': 'Pelo menos um campo deve ser fornecido para atualização',
+        }),
     });
   }
 
@@ -138,8 +127,8 @@ export class AuthValidators {
   public validateId() {
     return validationMiddleware.validate({
       params: Joi.object({
-        id: commonSchemas.id
-      })
+        id: commonSchemas.id,
+      }),
     });
   }
 
@@ -151,28 +140,17 @@ export class AuthValidators {
       query: Joi.object({
         page: commonSchemas.pagination.page,
         limit: commonSchemas.pagination.limit,
-        search: Joi.string()
-          .min(2)
-          .max(100)
-          .trim()
-          .optional()
-          .messages({
-            'string.min': 'Busca deve ter pelo menos 2 caracteres',
-            'string.max': 'Busca deve ter no máximo 100 caracteres'
-          }),
-        role: Joi.string()
-          .valid('admin', 'user', 'moderator', 'viewer')
-          .optional(),
-        status: Joi.string()
-          .valid('active', 'inactive', 'suspended', 'pending')
-          .optional(),
+        search: Joi.string().min(2).max(100).trim().optional().messages({
+          'string.min': 'Busca deve ter pelo menos 2 caracteres',
+          'string.max': 'Busca deve ter no máximo 100 caracteres',
+        }),
+        role: Joi.string().valid('admin', 'user', 'moderator', 'viewer').optional(),
+        status: Joi.string().valid('active', 'inactive', 'suspended', 'pending').optional(),
         sortBy: Joi.string()
           .valid('createdAt', 'updatedAt', 'email', 'username', 'fullName')
           .default('createdAt'),
-        sortOrder: Joi.string()
-          .valid('asc', 'desc')
-          .default('desc')
-      })
+        sortOrder: Joi.string().valid('asc', 'desc').default('desc'),
+      }),
     });
   }
 
@@ -185,15 +163,11 @@ export class AuthValidators {
         email: commonSchemas.email,
         username: commonSchemas.username,
         fullName: commonSchemas.name,
-        password: commonSchemas.password,
-        role: Joi.string()
-          .valid('admin', 'user', 'moderator', 'viewer')
-          .default('user'),
-        status: Joi.string()
-          .valid('active', 'inactive', 'pending')
-          .default('active'),
-        sendWelcomeEmail: Joi.boolean().default(true)
-      })
+        password: commonSchemas.optionalPassword,
+        role: Joi.string().valid('admin', 'user', 'moderator', 'viewer').default('user'),
+        status: Joi.string().valid('active', 'inactive', 'pending').default('active'),
+        sendWelcomeEmail: Joi.boolean().default(true),
+      }),
     });
   }
 
@@ -203,22 +177,20 @@ export class AuthValidators {
   public updateUser() {
     return validationMiddleware.validate({
       params: Joi.object({
-        id: commonSchemas.id
+        id: commonSchemas.id,
       }),
       body: Joi.object({
         email: commonSchemas.email.optional(),
         username: commonSchemas.username.optional(),
         fullName: commonSchemas.name.optional(),
-        role: Joi.string()
-          .valid('admin', 'user', 'moderator', 'viewer')
-          .optional(),
-        status: Joi.string()
-          .valid('active', 'inactive', 'suspended', 'pending')
-          .optional(),
-        password: commonSchemas.optionalPassword
-      }).min(1).messages({
-        'object.min': 'Pelo menos um campo deve ser fornecido para atualização'
+        role: Joi.string().valid('admin', 'user', 'moderator', 'viewer').optional(),
+        status: Joi.string().valid('active', 'inactive', 'suspended', 'pending').optional(),
+        password: commonSchemas.optionalPassword,
       })
+        .min(1)
+        .messages({
+          'object.min': 'Pelo menos um campo deve ser fornecido para atualização',
+        }),
     });
   }
 
@@ -228,8 +200,8 @@ export class AuthValidators {
   public verifyEmail() {
     return validationMiddleware.validate({
       body: Joi.object({
-        token: commonSchemas.token
-      })
+        token: commonSchemas.token,
+      }),
     });
   }
 
@@ -239,8 +211,8 @@ export class AuthValidators {
   public resendVerificationEmail() {
     return validationMiddleware.validate({
       body: Joi.object({
-        email: commonSchemas.email
-      })
+        email: commonSchemas.email,
+      }),
     });
   }
 
@@ -250,8 +222,8 @@ export class AuthValidators {
   public logout() {
     return validationMiddleware.validate({
       body: Joi.object({
-        refreshToken: commonSchemas.token.optional()
-      })
+        refreshToken: commonSchemas.token.optional(),
+      }),
     });
   }
 
@@ -261,8 +233,8 @@ export class AuthValidators {
   public checkUsername() {
     return validationMiddleware.validate({
       query: Joi.object({
-        username: commonSchemas.username
-      })
+        username: commonSchemas.username,
+      }),
     });
   }
 
@@ -272,8 +244,8 @@ export class AuthValidators {
   public checkEmail() {
     return validationMiddleware.validate({
       query: Joi.object({
-        email: commonSchemas.email
-      })
+        email: commonSchemas.email,
+      }),
     });
   }
 
@@ -288,9 +260,9 @@ export class AuthValidators {
           .required()
           .messages({
             'string.pattern.base': 'Header Authorization deve estar no formato "Bearer <token>"',
-            'any.required': 'Header Authorization é obrigatório'
-          })
-      }).unknown(true)
+            'any.required': 'Header Authorization é obrigatório',
+          }),
+      }).unknown(true),
     });
   }
 }

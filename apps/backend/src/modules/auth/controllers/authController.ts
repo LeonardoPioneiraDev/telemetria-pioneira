@@ -519,42 +519,34 @@ export class AuthController {
     reply: FastifyReply
   ): Promise<void> {
     try {
+      const adminId = request.user!.id;
       const userData = request.body;
 
-      authLogger.info('Admin criando usuário', {
-        adminId: request.user!.id,
-        email: userData.email,
-      });
+      authLogger.info('Admin criando usuário', { adminId, email: userData.email });
 
-      // Verificar se email já existe
-      const emailExists = await userModel.emailExists(userData.email);
-      if (emailExists) {
-        return responseHelper.conflictError(reply, 'Email já está em uso');
-      }
-
-      // Verificar se username já existe
-      const usernameExists = await userModel.usernameExists(userData.username);
-      if (usernameExists) {
-        return responseHelper.conflictError(reply, 'Nome de usuário já está em uso');
-      }
-
-      // Criar usuário
-      const user = await userModel.create({
+      const result = await authService.createUserByAdmin({
         email: userData.email,
         username: userData.username,
         fullName: userData.fullName,
         password: userData.password,
         role: userData.role || USER_ROLES.USER,
         status: (userData.status as any) || 'active',
-        emailVerified: true, // Admin pode criar usuários já verificados
+        sendWelcomeEmail: userData.sendWelcomeEmail,
       });
 
-      // Remover senha
-      const { password, ...sanitizedUser } = user;
+      const responseData = {
+        user: result.user,
+        temporaryPassword: result.temporaryPassword,
+      };
 
-      responseHelper.created(reply, sanitizedUser, 'Usuário criado com sucesso');
+      responseHelper.created(reply, responseData, 'Usuário criado com sucesso');
     } catch (error) {
       authLogger.error('Erro ao criar usuário:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('já está em uso')) {
+          return responseHelper.conflictError(reply, error.message);
+        }
+      }
       responseHelper.serverError(reply, 'Erro interno ao criar usuário');
     }
   }

@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
+import z from 'zod';
 import { USER_PERMISSIONS } from '../../../shared/constants/index.js';
 import { rateLimiter } from '../../../shared/middleware/rateLimiter.js';
 import { authController } from '../controllers/authController.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { authValidators } from '../validators/authValidators.js';
-import z from 'zod';
 
 export async function authRoutes(fastify: FastifyInstance) {
   // Prefixo para todas as rotas de autenticação
@@ -137,15 +137,19 @@ export async function authRoutes(fastify: FastifyInstance) {
           schema: {
             description: 'Resetar senha com token',
             tags: ['Autenticação'],
-            body: {
-              type: 'object',
-              required: ['token', 'newPassword', 'confirmPassword'],
-              properties: {
-                token: { type: 'string' },
-                newPassword: { type: 'string', minLength: 8 },
-                confirmPassword: { type: 'string' },
-              },
-            },
+            // ✅ CORREÇÃO: Convertido para Zod
+            body: z
+              .object({
+                token: z.string({ required_error: 'O token é obrigatório.' }),
+                newPassword: z
+                  .string()
+                  .min(8, { message: 'A nova senha deve ter no mínimo 8 caracteres.' }),
+                confirmPassword: z.string(),
+              })
+              .refine(data => data.newPassword === data.confirmPassword, {
+                message: 'A confirmação de senha não confere com a nova senha.',
+                path: ['confirmPassword'], // Indica qual campo está com o erro
+              }),
           },
         },
         authController.resetPassword
@@ -338,32 +342,39 @@ export async function authRoutes(fastify: FastifyInstance) {
           preHandler: [
             authMiddleware.authenticate(),
             authMiddleware.requirePermission(USER_PERMISSIONS.USER_CREATE),
-            authValidators.createUser(),
+            // 2. REMOVER a validação duplicada com Joi
+            // authValidators.createUser(),
           ],
           schema: {
             description: 'Criar usuário (Admin)',
             tags: ['Administração'],
             security: [{ bearerAuth: [] }],
-            body: {
-              type: 'object',
-              required: ['email', 'username', 'fullName', 'password'],
-              properties: {
-                email: { type: 'string', format: 'email' },
-                username: { type: 'string', minLength: 3, maxLength: 50 },
-                fullName: { type: 'string', minLength: 2, maxLength: 100 },
-                password: { type: 'string', minLength: 8 },
-                role: {
-                  type: 'string',
-                  enum: ['admin', 'user', 'moderator', 'viewer'],
-                  default: 'user',
-                },
-                status: {
-                  type: 'string',
-                  enum: ['active', 'inactive', 'pending'],
-                  default: 'active',
-                },
-                sendWelcomeEmail: { type: 'boolean', default: true },
-              },
+            // 3. SUBSTITUIR o schema JSON por um schema Zod
+            body: z.object({
+              email: z.string().email({ message: 'Email inválido' }),
+              username: z
+                .string()
+                .min(3, { message: 'Nome de usuário deve ter pelo menos 3 caracteres' }),
+              fullName: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
+              // 4. Deixar a senha opcional, como planejamos
+              password: z
+                .string()
+                .min(8, { message: 'Senha deve ter pelo menos 8 caracteres' })
+                .optional(),
+              role: z.enum(['admin', 'user', 'moderator', 'viewer']).default('user'),
+              status: z.enum(['active', 'inactive', 'pending']).default('active'),
+              sendWelcomeEmail: z.boolean().default(true),
+            }),
+            // Você também pode definir o schema de resposta com Zod para garantir consistência
+            response: {
+              201: z.object({
+                success: z.boolean(),
+                message: z.string(),
+                data: z.object({
+                  user: z.any(), // Defina a estrutura do usuário aqui se desejar
+                  temporaryPassword: z.string().optional(),
+                }),
+              }),
             },
           },
         },
