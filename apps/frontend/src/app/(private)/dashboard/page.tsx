@@ -3,36 +3,21 @@
 
 import { DriverDetails } from '@/components/dashboard/DriverDetails';
 import { DriverSearch } from '@/components/dashboard/DriverSearch';
-import { Button } from '@/components/ui/button';
+import { Header } from '@/components/shared/Header';
 import { Card } from '@/components/ui/card';
 import { DatePicker } from '@/components/ui/DatePicker';
-import { useAuth } from '@/contexts/AuthContext';
 import { Driver } from '@/types/api';
-import { BarChart3, LogOut } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function DashboardPage() {
-  const { logout } = useAuth();
   const [selectedDriver, setSelectedDriver] = useState<Driver | null>(null);
   const [reportDate, setReportDate] = useState<Date | undefined>(new Date());
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3">
-              <BarChart3 className="h-8 w-8 text-blue-600" />
-              <h1 className="text-xl font-bold text-gray-900">Dashboard de Telemetria</h1>
-            </div>
-            <Button variant="ghost" onClick={logout} className="text-gray-700 hover:text-gray-900">
-              <LogOut className="h-4 w-4 mr-2" />
-              Sair
-            </Button>
-          </div>
-        </div>
-      </nav>
+      <Header />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
