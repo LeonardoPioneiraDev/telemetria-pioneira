@@ -81,12 +81,12 @@ export const ReportActions = ({
     }
 
     const width = 900;
-    const margin = { top: 50, right: 150, left: 200, bottom: 40 };
-    const chartWidth = width - margin.left - margin.right;
+    const margin = { top: 50, right: 150, left: 150, bottom: 40 };
+    const chartWidth = 500;
 
     // Calcular altura baseada no número real de barras
     const barHeight = 12;
-    const barSpacing = 3;
+    const barSpacing = 6;
     const eventSpacing = 15; // Espaço entre grupos de eventos
 
     // Calcular total de barras que serão exibidas
@@ -150,12 +150,12 @@ export const ReportActions = ({
       
       <style>
         .chart-text { font-family: Arial, sans-serif; font-size: 11px; fill: #374151; }
-        .chart-title { font-family: Arial, sans-serif; font-size: 14px; font-weight: bold; fill: #111827; }
+        .chart-title { font-family: Arial, sans-serif; font-size: 18px; font-weight: bold; fill: #111827; }
         .axis-line { stroke: #d1d5db; stroke-width: 1; }
         .grid-line { stroke: #f3f4f6; stroke-width: 1; }
         .event-label { font-family: Arial, sans-serif; font-size: 10px; fill: #111827; font-weight: 600; }
-        .value-label { font-family: Arial, sans-serif; font-size: 10px; fill: #111827; font-weight: bold; }
-        .period-label { font-family: Arial, sans-serif; font-size: 9px; fill: #6b7280; }
+        .value-label { font-family: Arial, sans-serif; font-size: 12px; fill: #111827; font-weight: bold; }
+        .period-label { font-family: Arial, sans-serif; font-size: 12px; fill: #6b7280; }
       </style>
       
       <!-- Título -->
@@ -383,23 +383,24 @@ export const ReportActions = ({
           .metrics-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 11px;
+            font-size: 14px;
             margin-bottom: 20px;
           }
           .metrics-table th, .metrics-table td {
             border: 1px solid #d1d5db;
             padding: 6px 4px;
+            font-size: 14px;
             text-align: center;
           }
           .metrics-table th {
             background-color: #f3f4f6;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 14px;
           }
           .metrics-table th:first-child, .metrics-table td:first-child {
             text-align: left;
             width: 35%;
-            font-size: 10px;
+            font-size: 14px;
           }
           .metrics-table td {
             font-weight: 600;
