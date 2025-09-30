@@ -1,8 +1,8 @@
 import { readFileSync } from 'fs';
 import { join } from 'path';
 import { database } from '../config/database.js';
-import { logger } from '../shared/utils/logger.js';
 import { environment } from '../config/environment.js';
+import { logger } from '../shared/utils/logger.js';
 import { passwordService } from '../shared/utils/password.js';
 
 export class DatabaseMigrator {
@@ -44,7 +44,6 @@ export class DatabaseMigrator {
       }
 
       logger.info('✅ Migrações executadas com sucesso');
-
     } catch (error) {
       logger.error('❌ Erro ao executar migrações:', error);
       throw error;
@@ -98,7 +97,6 @@ export class DatabaseMigrator {
         await database.query(insertQuery, [filename]);
 
         logger.info(`✅ Migração ${filename} executada com sucesso`);
-
       } catch (error) {
         logger.error(`❌ Erro ao executar migração ${filename}:`, error);
         throw error;
@@ -115,7 +113,7 @@ export class DatabaseMigrator {
       const checkQuery = 'SELECT id FROM users WHERE email = $1 OR username = $2';
       const checkResult = await database.query(checkQuery, [
         environment.admin.email,
-        environment.admin.username
+        environment.admin.username,
       ]);
 
       if (checkResult.rows.length > 0) {
@@ -147,16 +145,15 @@ export class DatabaseMigrator {
         hashedPassword,
         'admin',
         'active',
-        true
+        true,
       ];
 
       await database.query(insertQuery, values);
 
       logger.info('👑 Usuário administrador criado com sucesso', {
         email: environment.admin.email,
-        username: environment.admin.username
+        username: environment.admin.username,
       });
-
     } catch (error) {
       logger.error('❌ Erro ao criar usuário administrador:', error);
       throw error;
@@ -172,26 +169,12 @@ export class DatabaseMigrator {
 
       const sampleUsers = [
         {
-          email: 'user@exemplo.com',
-          username: 'usuario',
-          fullName: 'Usuário Exemplo',
-          password: 'User@123456',
-          role: 'user'
+          email: 'suporte@vpioneira.com.br',
+          username: 'TI',
+          fullName: 'TI Admin',
+          password: '123456',
+          role: 'admin',
         },
-        {
-          email: 'moderador@exemplo.com',
-          username: 'moderador',
-          fullName: 'Moderador Exemplo',
-          password: 'Mod@123456',
-          role: 'moderator'
-        },
-        {
-          email: 'viewer@exemplo.com',
-          username: 'viewer',
-          fullName: 'Visualizador Exemplo',
-          password: 'View@123456',
-          role: 'viewer'
-        }
       ];
 
       for (const userData of sampleUsers) {
@@ -223,18 +206,16 @@ export class DatabaseMigrator {
             hashedPassword,
             userData.role,
             'active',
-            true
+            true,
           ];
 
           await database.query(insertQuery, values);
 
           logger.info(`👤 Usuário ${userData.username} criado com sucesso`);
-
         } catch (error) {
           logger.warn(`⚠️ Erro ao criar usuário ${userData.username}:`, error);
         }
       }
-
     } catch (error) {
       logger.error('❌ Erro ao criar usuários de exemplo:', error);
     }
@@ -269,7 +250,6 @@ export class DatabaseMigrator {
       await database.query(deleteQuery, [lastMigration]);
 
       logger.info(`✅ Migração ${lastMigration} revertida`);
-
     } catch (error) {
       logger.error('❌ Erro ao reverter migração:', error);
       throw error;
@@ -294,7 +274,6 @@ export class DatabaseMigrator {
       const pending = allMigrations.filter(migration => !executed.includes(migration));
 
       return { executed, pending };
-
     } catch (error) {
       logger.error('Erro ao obter status das migrações:', error);
       throw error;
@@ -306,12 +285,13 @@ export const migrator = DatabaseMigrator.getInstance();
 
 // Executar migrações se chamado diretamente
 if (import.meta.url === `file://${process.argv[1]}`) {
-  migrator.runMigrations()
+  migrator
+    .runMigrations()
     .then(() => {
       logger.info('🎉 Migrações concluídas');
       process.exit(0);
     })
-    .catch((error) => {
+    .catch(error => {
       logger.error('💥 Falha nas migrações:', error);
       process.exit(1);
     });

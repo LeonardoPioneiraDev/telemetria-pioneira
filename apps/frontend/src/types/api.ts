@@ -16,6 +16,15 @@ export interface AuthResponse {
 }
 
 /**
+ * Representa o resumo do desempenho com períodos e métricas.
+ */
+export interface PerformanceSummary {
+  periods: PerformancePeriod[];
+  metrics: PerformanceMetric[];
+  totalEvents: number;
+}
+
+/**
  * Representa um único motorista na lista de busca.
  * GET: /api/drivers?search=...
  */

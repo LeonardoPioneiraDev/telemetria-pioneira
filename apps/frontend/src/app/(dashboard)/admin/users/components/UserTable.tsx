@@ -32,14 +32,14 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useState } from 'react';
-import { User } from '../hooks/useUsers';
+import { UpdateUserData, User } from '../hooks/useUsers';
 import { DeleteUserDialog } from './DeleteUserDialog';
 import { UserDialog } from './UserDialog';
 
 interface UserTableProps {
   users: User[];
   loading: boolean;
-  onUpdateUser: (userId: string, data: unknown) => Promise<boolean>;
+  onUpdateUser: (userId: string, data: UpdateUserData) => Promise<boolean>;
   onDeleteUser: (userId: string) => Promise<boolean>;
   onResetPassword: (userId: string) => Promise<boolean>;
 }

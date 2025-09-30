@@ -42,7 +42,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isEditing = !!user;
 
-  const form = useForm<CreateUserData>({
+  const form = useForm<UpdateUserData>({
     defaultValues: {
       fullName: '',
       username: '',
@@ -70,7 +70,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
     }
   }, [user, open, form]);
 
-  const onSubmit = async (data: CreateUserData) => {
+  const onSubmit = async (data: UpdateUserData) => {
     setIsSubmitting(true);
 
     const success = await onSave(data);
@@ -132,11 +132,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
                     <span>Nome Completo</span>
                   </FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Ex: Felipe Batista dos Santos"
-                      disabled={isSubmitting}
-                    />
+                    <Input {...field} placeholder="Ex: João de Oliveira" disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -151,10 +147,10 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
                     <UserIcon className="h-4 w-4" />
-                    <span>Nome de Usuário (para login)</span>
+                    <span>Nome de Usuário</span>
                   </FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Ex: felipe.batista" disabled={isSubmitting} />
+                    <Input {...field} placeholder="Ex: joão" disabled={isSubmitting} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

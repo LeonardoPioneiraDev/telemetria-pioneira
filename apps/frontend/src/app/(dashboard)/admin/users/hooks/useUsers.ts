@@ -1,3 +1,5 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(dashboard)/admin/users/hooks/useUsers.ts
 import { api } from '@/lib/api';
 import { useEffect, useState } from 'react';
@@ -13,6 +15,7 @@ export interface User {
   emailVerified: boolean;
   createdAt: string;
   updatedAt: string;
+  permissions: string;
 }
 
 export interface CreateUserData {

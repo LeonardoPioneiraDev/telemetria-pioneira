@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(auth)/login/LoginClientPage.tsx
 'use client';
 
@@ -126,40 +127,43 @@ export default function LoginClientPage() {
   // Loading inicial
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-neutral-900 via-black to-neutral-900">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <div className="w-12 h-12 border-4 border-blue-200 rounded-full animate-spin border-t-blue-500"></div>
+            <div className="w-12 h-12 border-4 border-yellow-200 rounded-full animate-spin border-t-yellow-400"></div>
             <div className="absolute inset-0 flex items-center justify-center">
-              <Shield className="h-5 w-5 text-blue-600 animate-pulse" />
+              <Shield className="h-5 w-5 text-yellow-400 animate-pulse" />
             </div>
           </div>
-          <p className="text-sm text-blue-300 font-medium">Carregando...</p>
+          <p className="text-sm text-yellow-300 font-medium">Carregando...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-indigo-500/10 to-purple-500/5"></div>
+    <div className="min-h-screen relative overflow-hidden bg-gradient-to-br from-neutral-900 via-black to-neutral-900">
+      {/* Background Pattern - Amarelo e Preto */}
+      <div className="absolute inset-0 bg-gradient-to-br from-yellow-500/5 via-yellow-400/10 to-amber-500/5"></div>
 
-      {/* Animated Background Elements */}
-      <div className="absolute top-20 left-20 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-      <div className="absolute bottom-20 right-20 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-      <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl animate-pulse delay-500"></div>
+      {/* Animated Background Elements - Tons de Amarelo */}
+      <div className="absolute top-20 left-20 w-72 h-72 bg-yellow-500/10 rounded-full blur-3xl animate-pulse"></div>
+      <div className="absolute bottom-20 right-20 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+      <div className="absolute top-1/2 left-1/3 w-48 h-48 bg-yellow-400/10 rounded-full blur-2xl animate-pulse delay-500"></div>
 
-      {/* Floating Icons */}
+      {/* Floating Icons - Amarelo */}
       <div className="absolute top-32 right-32 opacity-20">
-        <Award className="h-8 w-8 text-blue-400 animate-bounce" style={{ animationDelay: '0s' }} />
+        <Award
+          className="h-8 w-8 text-yellow-400 animate-bounce"
+          style={{ animationDelay: '0s' }}
+        />
       </div>
       <div className="absolute bottom-40 left-40 opacity-20">
-        <Zap className="h-6 w-6 text-indigo-400 animate-bounce" style={{ animationDelay: '1s' }} />
+        <Zap className="h-6 w-6 text-amber-400 animate-bounce" style={{ animationDelay: '1s' }} />
       </div>
       <div className="absolute top-40 left-20 opacity-20">
         <TrendingUp
-          className="h-7 w-7 text-purple-400 animate-bounce"
+          className="h-7 w-7 text-yellow-300 animate-bounce"
           style={{ animationDelay: '2s' }}
         />
       </div>
@@ -170,8 +174,8 @@ export default function LoginClientPage() {
           <div className="text-center mb-6">
             <div className="flex justify-center mb-4">
               <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
-                <div className="relative bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-4 shadow-2xl">
+                <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-2xl blur-xl opacity-30 animate-pulse"></div>
+                <div className="relative bg-white/10 backdrop-blur-sm border border-yellow-400/20 rounded-2xl p-4 shadow-2xl shadow-yellow-500/10">
                   <Image
                     src="/logo.png"
                     alt="Sistema de Telemetria"
@@ -185,7 +189,7 @@ export default function LoginClientPage() {
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-indigo-500 bg-clip-text text-transparent">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-amber-500 bg-clip-text text-transparent">
                 Sistema de Telemetria
               </h1>
               <p className="text-neutral-300 text-sm">Acesso ao painel administrativo</p>
@@ -193,10 +197,10 @@ export default function LoginClientPage() {
           </div>
 
           {/* Card de Login */}
-          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl shadow-black/20">
+          <Card className="bg-white/10 backdrop-blur-xl border border-yellow-400/20 shadow-2xl shadow-black/20">
             <CardHeader className="space-y-2 text-center pb-4">
-              <div className="mx-auto w-12 h-12 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/25">
-                <Shield className="h-6 w-6 text-neutral-900" />
+              <div className="mx-auto w-12 h-12 bg-gradient-to-r from-yellow-400 to-amber-500 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-500/25">
+                <Shield className="h-6 w-6 text-black" />
               </div>
               <div>
                 <CardTitle className="text-xl font-bold text-white">
@@ -222,12 +226,12 @@ export default function LoginClientPage() {
                         </FormLabel>
                         <FormControl>
                           <div className="relative group">
-                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 group-focus-within:text-blue-400 transition-colors" />
+                            <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 group-focus-within:text-yellow-400 transition-colors" />
                             <Input
                               {...field}
                               type="email"
                               placeholder="seu.email@exemplo.com"
-                              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-neutral-400 focus:border-blue-400 focus:ring-blue-400/20 h-11 backdrop-blur-sm"
+                              className="pl-10 bg-white/10 border-white/20 text-white placeholder:text-neutral-400 focus:border-yellow-400 focus:ring-yellow-400/20 h-11 backdrop-blur-sm"
                               disabled={isSubmitting}
                             />
                           </div>
@@ -248,19 +252,19 @@ export default function LoginClientPage() {
                         </FormLabel>
                         <FormControl>
                           <div className="relative group">
-                            <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 group-focus-within:text-blue-400 transition-colors" />
+                            <KeyRound className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-neutral-400 group-focus-within:text-yellow-400 transition-colors" />
                             <Input
                               {...field}
                               type={showPassword ? 'text' : 'password'}
                               placeholder="Digite sua senha"
-                              className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-neutral-400 focus:border-blue-400 focus:ring-blue-400/20 h-11 backdrop-blur-sm"
+                              className="pl-10 pr-10 bg-white/10 border-white/20 text-white placeholder:text-neutral-400 focus:border-yellow-400 focus:ring-yellow-400/20 h-11 backdrop-blur-sm"
                               disabled={isSubmitting}
                             />
                             <Button
                               type="button"
                               variant="ghost"
                               size="sm"
-                              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-neutral-400 hover:text-blue-400 hover:bg-white/10"
+                              className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 text-neutral-400 hover:text-yellow-400 hover:bg-white/10"
                               onClick={() => setShowPassword(!showPassword)}
                               disabled={isSubmitting}
                             >
@@ -287,7 +291,7 @@ export default function LoginClientPage() {
                           <Checkbox
                             checked={field.value}
                             onCheckedChange={field.onChange}
-                            className="border-white/30 data-[state=checked]:bg-blue-400 data-[state=checked]:border-blue-400 data-[state=checked]:text-neutral-900"
+                            className="border-white/30 data-[state=checked]:bg-yellow-400 data-[state=checked]:border-yellow-400 data-[state=checked]:text-black"
                             disabled={isSubmitting}
                           />
                         </FormControl>
@@ -301,7 +305,7 @@ export default function LoginClientPage() {
                   {/* Botão de Submit */}
                   <Button
                     type="submit"
-                    className="w-full h-11 bg-gradient-to-r from-blue-400 to-indigo-500 hover:from-blue-500 hover:to-indigo-600 text-neutral-900 font-semibold shadow-lg shadow-blue-500/25 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="w-full h-11 bg-gradient-to-r from-yellow-400 to-amber-500 hover:from-yellow-500 hover:to-amber-600 text-black font-semibold shadow-lg shadow-yellow-500/25 transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? (
@@ -322,7 +326,7 @@ export default function LoginClientPage() {
                     <Button
                       type="button"
                       variant="ghost"
-                      className="text-sm text-neutral-300 hover:text-blue-400 hover:bg-white/5 transition-all duration-300 font-medium"
+                      className="text-sm text-neutral-300 hover:text-yellow-400 hover:bg-white/5 transition-all duration-300 font-medium"
                       onClick={() => router.push('/forgot-password')}
                       disabled={isSubmitting}
                     >
@@ -347,7 +351,9 @@ export default function LoginClientPage() {
 
           {/* Footer */}
           <div className="text-center mt-6 space-y-1">
-            <p className="text-xs text-neutral-400">© 2025 Sistema de Telemetria</p>
+            <p className="text-xs text-neutral-400">
+              © 2025 Viação Pioneira - Sistema de Telemetria
+            </p>
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(auth)/forgot-password/ForgotPasswordClientPage.tsx
 'use client';
 

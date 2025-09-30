@@ -104,7 +104,7 @@ export const ReportActions = ({
       margin.bottom +
       totalBars * (barHeight + barSpacing) +
       metricsWithData.length * eventSpacing;
-    const chartHeight = height - margin.top - margin.bottom;
+    // const chartHeight = height - margin.top - margin.bottom;
 
     // Encontrar valor máximo para escala X
     const maxValue = Math.max(
@@ -177,7 +177,7 @@ export const ReportActions = ({
   `;
 
     // Gerar grupos de eventos
-    metricsWithData.forEach((metric, eventIndex) => {
+    metricsWithData.forEach(metric => {
       // Label do evento (posicionado no meio do grupo)
       const eventStartY = currentY;
 
