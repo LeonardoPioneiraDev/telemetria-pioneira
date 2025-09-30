@@ -44,7 +44,8 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
 
   const form = useForm<CreateUserData>({
     defaultValues: {
-      name: '',
+      fullName: '',
+      username: '',
       email: '',
       role: 'user',
     },
@@ -54,13 +55,15 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
   useEffect(() => {
     if (user && open) {
       form.reset({
-        name: user.name,
+        fullName: user.fullName,
+        username: user.username,
         email: user.email,
         role: user.role,
       });
     } else if (!user && open) {
       form.reset({
-        name: '',
+        fullName: '',
+        username: '',
         email: '',
         role: 'user',
       });
@@ -121,7 +124,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
             {/* Campo Nome */}
             <FormField
               control={form.control}
-              name="name"
+              name="fullName"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="flex items-center space-x-2">
@@ -131,7 +134,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
                   <FormControl>
                     <Input
                       {...field}
-                      placeholder="Digite o nome completo"
+                      placeholder="Ex: Felipe Batista dos Santos"
                       disabled={isSubmitting}
                     />
                   </FormControl>
@@ -140,7 +143,25 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
               )}
             />
 
-            {/* Campo Email */}
+            {/* --- Campo Nome de Usuário --- */}
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="flex items-center space-x-2">
+                    <UserIcon className="h-4 w-4" />
+                    <span>Nome de Usuário (para login)</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Ex: felipe.batista" disabled={isSubmitting} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* --- Campo Email --- */}
             <FormField
               control={form.control}
               name="email"
@@ -163,7 +184,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
               )}
             />
 
-            {/* Campo Role */}
+            {/* --- Campo Role (Permissão) --- */}
             <FormField
               control={form.control}
               name="role"
@@ -199,7 +220,7 @@ export function UserDialog({ user, onSave, trigger }: UserDialogProps) {
               )}
             />
 
-            {/* Botões */}
+            {/* --- Botões de Ação --- */}
             <div className="flex justify-end space-x-2 pt-4">
               <Button
                 type="button"

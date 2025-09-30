@@ -98,8 +98,7 @@ export class UserModel {
         'email_verified',
         'token_version',
       ];
-
-      const values = [
+      const values: (string | number | boolean | Date)[] = [
         userData.email,
         userData.username,
         userData.fullName,
@@ -107,34 +106,48 @@ export class UserModel {
         userData.role || USER_ROLES.USER,
         userData.status || USER_STATUS.ACTIVE,
         userData.emailVerified || false,
-        1, // token_version inicial
+        1,
       ];
 
-      // Lógica para satisfazer a constraint "check_email_verified_consistency"
       if (userData.emailVerified) {
         columns.push('email_verified_at');
-        values.push(new Date()); // Adiciona a data e hora atuais
+        values.push(new Date());
       }
 
       const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
-
       const query = `
-        INSERT INTO users (${columns.join(', ')})
-        VALUES (${placeholders})
-        RETURNING *
-      `;
+      INSERT INTO users (${columns.join(', ')})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
 
       const result = await database.query(query, values);
       const user = this.mapRowToUser(result.rows[0]);
 
-      logger.info('Usuário criado com sucesso', {
-        userId: user.id,
-        email: user.email,
-      });
-
+      logger.info('Usuário criado com sucesso', { userId: user.id, email: user.email });
       return user;
-    } catch (error) {
-      logger.error('Erro ao criar usuário:', error);
+    } catch (error: any) {
+      logger.error('Erro ao criar usuário:', error.message);
+
+      // ✅ LÓGICA DE TRATAMENTO DE ERRO
+      if (error.code === '23505') {
+        // Erro de violação de chave única
+        if (error.constraint.includes('email')) {
+          throw new Error('Este email já está em uso.');
+        }
+        if (error.constraint.includes('username')) {
+          throw new Error('Este nome de usuário já está em uso.');
+        }
+      }
+
+      if (error.code === '23514') {
+        // Erro de violação de restrição de verificação
+        if (error.constraint === 'check_username_format') {
+          throw new Error('Formato de nome de usuário inválido. Use apenas letras e números.');
+        }
+      }
+
+      // Se não for um erro conhecido, lança o erro original
       throw error;
     }
   }
