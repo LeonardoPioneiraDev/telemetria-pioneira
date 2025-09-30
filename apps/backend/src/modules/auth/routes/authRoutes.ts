@@ -1,3 +1,4 @@
+//apps/backend/src/modules/auth/routes/authRoutes.ts
 import { FastifyInstance } from 'fastify';
 import z from 'zod';
 import { USER_PERMISSIONS } from '../../../shared/constants/index.js';
@@ -310,28 +311,22 @@ export async function authRoutes(fastify: FastifyInstance) {
           preHandler: [
             authMiddleware.authenticate(),
             authMiddleware.requirePermission(USER_PERMISSIONS.USER_LIST),
-            authValidators.listUsers(),
           ],
           schema: {
             description: 'Listar usuários (Admin)',
             tags: ['Administração'],
             security: [{ bearerAuth: [] }],
-            querystring: {
-              type: 'object',
-              properties: {
-                page: { type: 'integer', minimum: 1, default: 1 },
-                limit: { type: 'integer', minimum: 1, maximum: 100, default: 10 },
-                search: { type: 'string', minLength: 2, maxLength: 100 },
-                role: { type: 'string', enum: ['admin', 'user', 'moderator', 'viewer'] },
-                status: { type: 'string', enum: ['active', 'inactive', 'suspended', 'pending'] },
-                sortBy: {
-                  type: 'string',
-                  enum: ['createdAt', 'updatedAt', 'email', 'username', 'fullName'],
-                  default: 'createdAt',
-                },
-                sortOrder: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
-              },
-            },
+            querystring: z.object({
+              page: z.coerce.number().int().positive().default(1),
+              limit: z.coerce.number().int().positive().max(100).default(10),
+              search: z.string().min(2).max(100).optional(),
+              role: z.enum(['admin', 'user', 'moderator', 'viewer']).optional(),
+              status: z.enum(['active', 'inactive', 'suspended', 'pending']).optional(),
+              sortBy: z
+                .enum(['createdAt', 'updatedAt', 'email', 'username', 'fullName'])
+                .default('createdAt'),
+              sortOrder: z.enum(['asc', 'desc']).default('desc'),
+            }),
           },
         },
         authController.listUsers

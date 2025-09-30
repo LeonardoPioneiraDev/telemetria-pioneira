@@ -1,8 +1,9 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
+//apps/backend/src/modules/auth/middleware/validationMiddleware.ts
+import { FastifyReply, FastifyRequest } from 'fastify';
 import Joi from 'joi';
-import { responseHelper } from '../../../shared/utils/responseHelper.js';
-import { logger } from '../../../shared/utils/logger.js';
 import { environment } from '../../../config/environment.js';
+import { logger } from '../../../shared/utils/logger.js';
+import { responseHelper } from '../../../shared/utils/responseHelper.js';
 
 export interface ValidationOptions {
   body?: Joi.ObjectSchema;
@@ -35,7 +36,7 @@ export class ValidationMiddleware {
         const validationOptions = {
           abortEarly: options.abortEarly ?? false,
           allowUnknown: options.allowUnknown ?? false,
-          stripUnknown: options.stripUnknown ?? true
+          stripUnknown: options.stripUnknown ?? true,
         };
 
         // Validar body
@@ -80,9 +81,8 @@ export class ValidationMiddleware {
           hasBody: !!options.body,
           hasParams: !!options.params,
           hasQuery: !!options.query,
-          hasHeaders: !!options.headers
+          hasHeaders: !!options.headers,
         });
-
       } catch (error) {
         logger.error('Erro na validação:', error);
         return responseHelper.serverError(reply, 'Erro interno na validação');
@@ -93,7 +93,11 @@ export class ValidationMiddleware {
   /**
    * Tratar erros de validação
    */
-  private handleValidationError(error: Joi.ValidationError, reply: FastifyReply, source: string): void {
+  private handleValidationError(
+    error: Joi.ValidationError,
+    reply: FastifyReply,
+    source: string
+  ): void {
     const errors = error.details.map(detail => {
       const field = detail.path.join('.');
       return `${source}.${field}: ${detail.message}`;
@@ -103,7 +107,7 @@ export class ValidationMiddleware {
       source,
       errors,
       url: reply.request.url,
-      method: reply.request.method
+      method: reply.request.method,
     });
 
     responseHelper.validationError(reply, errors, `Dados inválidos em ${source}`);
@@ -118,88 +122,57 @@ export class ValidationMiddleware {
       .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/)
       .messages({
         'string.min': `A senha deve ter pelo menos ${environment.auth.password.minLength} caracteres`,
-        'string.pattern.base': 'A senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 símbolo especial'
+        'string.pattern.base':
+          'A senha deve conter pelo menos: 1 letra minúscula, 1 maiúscula, 1 número e 1 símbolo especial',
       });
 
     return {
-      email: Joi.string()
-        .email()
-        .lowercase()
-        .trim()
-        .required()
-        .messages({
-          'string.email': 'Email inválido',
-          'any.required': 'Email é obrigatório'
-        }),
+      email: Joi.string().email().lowercase().trim().required().messages({
+        'string.email': 'Email inválido',
+        'any.required': 'Email é obrigatório',
+      }),
 
       password: passwordSchema.required().messages({
-        'any.required': 'Senha é obrigatória'
+        'any.required': 'Senha é obrigatória',
       }),
 
       optionalPassword: passwordSchema.optional(),
 
-      username: Joi.string()
-        .alphanum()
-        .min(3)
-        .max(50)
-        .lowercase()
-        .trim()
-        .required()
-        .messages({
-          'string.alphanum': 'Nome de usuário deve conter apenas letras e números',
-          'string.min': 'Nome de usuário deve ter pelo menos 3 caracteres',
-          'string.max': 'Nome de usuário deve ter no máximo 50 caracteres',
-          'any.required': 'Nome de usuário é obrigatório'
-        }),
+      username: Joi.string().alphanum().min(3).max(50).lowercase().trim().required().messages({
+        'string.alphanum': 'Nome de usuário deve conter apenas letras e números',
+        'string.min': 'Nome de usuário deve ter pelo menos 3 caracteres',
+        'string.max': 'Nome de usuário deve ter no máximo 50 caracteres',
+        'any.required': 'Nome de usuário é obrigatório',
+      }),
 
-      name: Joi.string()
-        .min(2)
-        .max(100)
-        .trim()
-        .required()
-        .messages({
-          'string.min': 'Nome deve ter pelo menos 2 caracteres',
-          'string.max': 'Nome deve ter no máximo 100 caracteres',
-          'any.required': 'Nome é obrigatório'
-        }),
+      name: Joi.string().min(2).max(100).trim().required().messages({
+        'string.min': 'Nome deve ter pelo menos 2 caracteres',
+        'string.max': 'Nome deve ter no máximo 100 caracteres',
+        'any.required': 'Nome é obrigatório',
+      }),
 
-      id: Joi.string()
-        .uuid()
-        .required()
-        .messages({
-          'string.uuid': 'ID deve ser um UUID válido',
-          'any.required': 'ID é obrigatório'
-        }),
+      id: Joi.string().uuid().required().messages({
+        'string.uuid': 'ID deve ser um UUID válido',
+        'any.required': 'ID é obrigatório',
+      }),
 
-      token: Joi.string()
-        .min(10)
-        .required()
-        .messages({
-          'string.min': 'Token inválido',
-          'any.required': 'Token é obrigatório'
-        }),
+      token: Joi.string().min(10).required().messages({
+        'string.min': 'Token inválido',
+        'any.required': 'Token é obrigatório',
+      }),
 
       pagination: {
-        page: Joi.number()
-          .integer()
-          .min(1)
-          .default(1)
-          .messages({
-            'number.integer': 'Página deve ser um número inteiro',
-            'number.min': 'Página deve ser maior que 0'
-          }),
+        page: Joi.number().integer().min(1).default(1).messages({
+          'number.integer': 'Página deve ser um número inteiro',
+          'number.min': 'Página deve ser maior que 0',
+        }),
 
-        limit: Joi.number()
-          .integer()
-          .min(1)
-          .max(100)
-          .default(10)
-          .messages({
-            'number.integer': 'Limite deve ser um número inteiro',
-            'number.min': 'Limite deve ser maior que 0',
-            'number.max': 'Limite deve ser no máximo 100'
-          })
-      }
+        limit: Joi.number().integer().min(1).max(100).default(10).messages({
+          'number.integer': 'Limite deve ser um número inteiro',
+          'number.min': 'Limite deve ser maior que 0',
+          'number.max': 'Limite deve ser no máximo 100',
+        }),
+      },
     };
   }
 }

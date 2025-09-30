@@ -16,6 +16,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
+import { userRoutes } from './modules/users/routes/userRoutes.js';
 
 export class Application {
   private static instance: Application;
@@ -256,7 +257,9 @@ export class Application {
 
     // Registrar rotas de autenticação
     await this.fastify.register(authRoutes, { prefix: '/api' });
-    await this.fastify.register(driverRoutes, { prefix: '/api' }); // 2. REGISTRE A NOVA ROTA AQUI
+    await this.fastify.register(driverRoutes, { prefix: '/api' });
+    // await this.fastify.register(authRoutes, { prefix: '/api/auth' });
+    await this.fastify.register(userRoutes, { prefix: '/api/users' });
 
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
