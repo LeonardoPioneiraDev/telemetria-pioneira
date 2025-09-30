@@ -489,7 +489,7 @@ export class UserModel {
       username: row.username,
       fullName: row.full_name,
       password: row.password,
-      role: row.role,
+      role: row.role ? row.role.trim() : row.role,
       status: row.status,
       emailVerified: row.email_verified,
       emailVerifiedAt: row.email_verified_at,

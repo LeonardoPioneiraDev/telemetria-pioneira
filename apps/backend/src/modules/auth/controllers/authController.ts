@@ -1,3 +1,4 @@
+//apps/backend/src/modules/auth/controllers/authController.ts
 import { FastifyReply, FastifyRequest } from 'fastify';
 import type { UserRole } from '../../../shared/constants/index.js';
 import { USER_ROLES } from '../../../shared/constants/index.js';
@@ -107,7 +108,7 @@ export class AuthController {
         acceptTerms,
       });
 
-      responseHelper.created(reply, result.user, result.message);
+      return responseHelper.created(reply, result.user, result.message);
     } catch (error) {
       authLogger.error('Erro no registro:', error);
 
@@ -121,7 +122,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno no registro');
+      return responseHelper.serverError(reply, 'Erro interno no registro');
     }
   }
 
@@ -174,7 +175,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno no login');
+      return responseHelper.serverError(reply, 'Erro interno no login');
     }
   }
 
@@ -192,7 +193,7 @@ export class AuthController {
 
       const result = await authService.refreshToken(refreshToken);
 
-      responseHelper.tokenRefreshed(reply, result, 'Token renovado com sucesso');
+      return responseHelper.tokenRefreshed(reply, result, 'Token renovado com sucesso');
     } catch (error) {
       authLogger.error('Erro na renovação de token:', error);
 
@@ -210,7 +211,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno na renovação do token');
+      return responseHelper.serverError(reply, 'Erro interno na renovação do token');
     }
   }
 
@@ -228,7 +229,7 @@ export class AuthController {
 
       const result = await authService.requestPasswordReset({ email });
 
-      responseHelper.emailSent(reply, result.message);
+      return responseHelper.emailSent(reply, result.message);
     } catch (error) {
       authLogger.error('Erro na solicitação de reset de senha:', error);
 
@@ -236,7 +237,7 @@ export class AuthController {
         return responseHelper.serverError(reply, 'Falha ao enviar email de recuperação');
       }
 
-      responseHelper.serverError(reply, 'Erro interno na solicitação de reset');
+      return responseHelper.serverError(reply, 'Erro interno na solicitação de reset');
     }
   }
 
@@ -254,7 +255,7 @@ export class AuthController {
 
       const result = await authService.resetPassword({ token, newPassword });
 
-      responseHelper.passwordChanged(reply, result.message);
+      return responseHelper.passwordChanged(reply, result.message);
     } catch (error) {
       authLogger.error('Erro no reset de senha:', error);
 
@@ -272,7 +273,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno no reset de senha');
+      return responseHelper.serverError(reply, 'Erro interno no reset de senha');
     }
   }
 
@@ -294,7 +295,7 @@ export class AuthController {
         newPassword,
       });
 
-      responseHelper.passwordChanged(reply, result.message);
+      return responseHelper.passwordChanged(reply, result.message);
     } catch (error) {
       authLogger.error('Erro na alteração de senha:', error);
 
@@ -317,7 +318,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno na alteração de senha');
+      return responseHelper.serverError(reply, 'Erro interno na alteração de senha');
     }
   }
 
@@ -332,10 +333,10 @@ export class AuthController {
 
       const result = await authService.logout(userId);
 
-      responseHelper.logoutSuccess(reply, result.message);
+      return responseHelper.logoutSuccess(reply, result.message);
     } catch (error) {
       authLogger.error('Erro no logout:', error);
-      responseHelper.serverError(reply, 'Erro interno no logout');
+      return responseHelper.serverError(reply, 'Erro interno no logout');
     }
   }
 
@@ -345,10 +346,8 @@ export class AuthController {
   public async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const userId = request.user!.id;
-
       const profile = await authService.getProfile(userId);
-
-      responseHelper.success(reply, profile, 'Perfil recuperado com sucesso');
+      return responseHelper.success(reply, profile, 'Perfil recuperado com sucesso');
     } catch (error) {
       logger.error('Erro ao obter perfil:', error);
 
@@ -356,7 +355,7 @@ export class AuthController {
         return responseHelper.notFoundError(reply, 'Usuário não encontrado');
       }
 
-      responseHelper.serverError(reply, 'Erro interno ao obter perfil');
+      return responseHelper.serverError(reply, 'Erro interno ao obter perfil');
     }
   }
 
@@ -375,7 +374,7 @@ export class AuthController {
 
       const updatedProfile = await authService.updateProfile(userId, updateData);
 
-      responseHelper.updated(reply, updatedProfile, 'Perfil atualizado com sucesso');
+      return responseHelper.updated(reply, updatedProfile, 'Perfil atualizado com sucesso');
     } catch (error) {
       authLogger.error('Erro ao atualizar perfil:', error);
 
@@ -389,7 +388,7 @@ export class AuthController {
         }
       }
 
-      responseHelper.serverError(reply, 'Erro interno ao atualizar perfil');
+      return responseHelper.serverError(reply, 'Erro interno ao atualizar perfil');
     }
   }
 
@@ -405,10 +404,10 @@ export class AuthController {
 
       const result = await authService.checkEmailExists(email);
 
-      responseHelper.success(reply, result, 'Verificação realizada');
+      return responseHelper.success(reply, result, 'Verificação realizada');
     } catch (error) {
       logger.error('Erro ao verificar email:', error);
-      responseHelper.serverError(reply, 'Erro interno na verificação');
+      return responseHelper.serverError(reply, 'Erro interno na verificação');
     }
   }
 
@@ -424,10 +423,10 @@ export class AuthController {
 
       const result = await authService.checkUsernameExists(username);
 
-      responseHelper.success(reply, result, 'Verificação realizada');
+      return responseHelper.success(reply, result, 'Verificação realizada');
     } catch (error) {
       logger.error('Erro ao verificar username:', error);
-      responseHelper.serverError(reply, 'Erro interno na verificação');
+      return responseHelper.serverError(reply, 'Erro interno na verificação');
     }
   }
 
@@ -463,25 +462,35 @@ export class AuthController {
 
       const result = await userModel.list(options);
 
-      // Remover senhas dos usuários
-      const sanitizedUsers = result.users.map(user => {
-        const { password, ...sanitizedUser } = user;
-        return sanitizedUser;
-      });
+      const sanitizedUsers = result.users.map(user => ({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        status: user.status,
+        emailVerified: user.emailVerified,
+        lastLoginAt: user.lastLoginAt, // Será serializado para string
+        tokenVersion: user.tokenVersion,
+        createdAt: user.createdAt, // Será serializado para string
+        updatedAt: user.updatedAt, // Será serializado para string
+      }));
 
-      responseHelper.successWithPagination(
+      return responseHelper.successWithPagination(
         reply,
         sanitizedUsers,
         {
           page: result.page,
           limit: result.limit,
           total: result.total,
+          totalPages: result.totalPages,
         },
         'Usuários recuperados com sucesso'
       );
     } catch (error) {
       logger.error('Erro ao listar usuários:', error);
-      responseHelper.serverError(reply, 'Erro interno ao listar usuários');
+      // ✅ CORREÇÃO: Adicionar return
+      return responseHelper.serverError(reply, 'Erro interno ao listar usuários');
     }
   }
 
@@ -504,10 +513,10 @@ export class AuthController {
       // Remover senha
       const { password, ...sanitizedUser } = user;
 
-      responseHelper.success(reply, sanitizedUser, 'Usuário recuperado com sucesso');
+      return responseHelper.success(reply, sanitizedUser, 'Usuário recuperado com sucesso');
     } catch (error) {
       logger.error('Erro ao obter usuário por ID:', error);
-      responseHelper.serverError(reply, 'Erro interno ao obter usuário');
+      return responseHelper.serverError(reply, 'Erro interno ao obter usuário');
     }
   }
 
@@ -539,7 +548,7 @@ export class AuthController {
         temporaryPassword: result.temporaryPassword,
       };
 
-      responseHelper.created(reply, responseData, 'Usuário criado com sucesso');
+      return responseHelper.created(reply, responseData, 'Usuário criado com sucesso');
     } catch (error) {
       authLogger.error('Erro ao criar usuário:', error);
       if (error instanceof Error) {
@@ -547,7 +556,7 @@ export class AuthController {
           return responseHelper.conflictError(reply, error.message);
         }
       }
-      responseHelper.serverError(reply, 'Erro interno ao criar usuário');
+      return responseHelper.serverError(reply, 'Erro interno ao criar usuário');
     }
   }
 
@@ -574,7 +583,7 @@ export class AuthController {
 
       const result = await authService.initiatePasswordResetByAdmin(targetUserId, adminId);
 
-      responseHelper.success(reply, null, result.message);
+      return responseHelper.success(reply, null, result.message);
     } catch (error) {
       authLogger.error('Erro no controller de reset de senha pelo admin:', error);
 
@@ -582,7 +591,7 @@ export class AuthController {
         return responseHelper.notFoundError(reply, 'Usuário alvo não encontrado');
       }
 
-      responseHelper.serverError(reply, 'Erro interno ao tentar resetar a senha do usuário');
+      return responseHelper.serverError(reply, 'Erro interno ao tentar resetar a senha do usuário');
     }
   }
 
@@ -637,10 +646,10 @@ export class AuthController {
       // Remover senha
       const { password, ...sanitizedUser } = updatedUser;
 
-      responseHelper.updated(reply, sanitizedUser, 'Usuário atualizado com sucesso');
+      return responseHelper.updated(reply, sanitizedUser, 'Usuário atualizado com sucesso');
     } catch (error) {
       authLogger.error('Erro ao atualizar usuário:', error);
-      responseHelper.serverError(reply, 'Erro interno ao atualizar usuário');
+      return responseHelper.serverError(reply, 'Erro interno ao atualizar usuário');
     }
   }
 
@@ -682,10 +691,10 @@ export class AuthController {
         return responseHelper.notFoundError(reply, 'Usuário não encontrado');
       }
 
-      responseHelper.deleted(reply, 'Usuário deletado com sucesso');
+      return responseHelper.deleted(reply, 'Usuário deletado com sucesso');
     } catch (error) {
       authLogger.error('Erro ao deletar usuário:', error);
-      responseHelper.serverError(reply, 'Erro interno ao deletar usuário');
+      return responseHelper.serverError(reply, 'Erro interno ao deletar usuário');
     }
   }
 }

@@ -1,9 +1,9 @@
-import { FastifyRequest, FastifyReply } from 'fastify';
-import { jwtService } from '../../../shared/utils/jwt.js';
-import { responseHelper } from '../../../shared/utils/responseHelper.js';
-import { logger, securityLogger } from '../../../shared/utils/logger.js';
-import { USER_PERMISSIONS, ROLE_PERMISSIONS } from '../../../shared/constants/index.js';
+//apps/backend/src/modules/auth/middleware/authMiddleware.ts
+import { FastifyReply, FastifyRequest } from 'fastify';
 import type { UserPermission, UserRole } from '../../../shared/constants/index.js';
+import { jwtService } from '../../../shared/utils/jwt.js';
+import { logger, securityLogger } from '../../../shared/utils/logger.js';
+import { responseHelper } from '../../../shared/utils/responseHelper.js';
 
 export interface AuthenticatedUser {
   id: string;
@@ -32,27 +32,27 @@ export class AuthMiddleware {
     return async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const token = this.extractToken(request);
-        
+
         if (!token) {
           securityLogger.warn('Tentativa de acesso sem token', {
             ip: request.ip,
             url: request.url,
             method: request.method,
-            userAgent: request.headers['user-agent']
+            userAgent: request.headers['user-agent'],
           });
-          
+
           return responseHelper.authenticationError(reply, 'Token de autenticação não fornecido');
         }
 
         const payload = jwtService.verifyAccessToken(token);
-        
+
         // Adicionar usuário ao request
         request.user = {
           id: payload.id,
           email: payload.email,
           username: payload.username,
           role: payload.role as UserRole,
-          permissions: payload.permissions as UserPermission[]
+          permissions: payload.permissions as UserPermission[],
         };
 
         securityLogger.info('Usuário autenticado com sucesso', {
@@ -61,23 +61,25 @@ export class AuthMiddleware {
           role: payload.role,
           ip: request.ip,
           url: request.url,
-          method: request.method
+          method: request.method,
         });
-
       } catch (error) {
         securityLogger.warn('Falha na autenticação', {
           error: error instanceof Error ? error.message : 'Erro desconhecido',
           ip: request.ip,
           url: request.url,
           method: request.method,
-          userAgent: request.headers['user-agent']
+          userAgent: request.headers['user-agent'],
         });
 
         if (error instanceof Error) {
           if (error.message === 'Token expirado') {
-            return responseHelper.authenticationError(reply, 'Token expirado. Faça login novamente');
+            return responseHelper.authenticationError(
+              reply,
+              'Token expirado. Faça login novamente'
+            );
           }
-          
+
           if (error.message === 'Token inválido') {
             return responseHelper.authenticationError(reply, 'Token inválido');
           }
@@ -95,22 +97,22 @@ export class AuthMiddleware {
     return async (request: FastifyRequest, reply: FastifyReply) => {
       try {
         const token = this.extractToken(request);
-        
+
         if (token) {
           const payload = jwtService.verifyAccessToken(token);
-          
+
           request.user = {
             id: payload.id,
             email: payload.email,
             username: payload.username,
             role: payload.role as UserRole,
-            permissions: payload.permissions as UserPermission[]
+            permissions: payload.permissions as UserPermission[],
           };
         }
       } catch (error) {
         // Em autenticação opcional, ignorar erros de token
         logger.debug('Token opcional inválido ignorado', {
-          error: error instanceof Error ? error.message : 'Erro desconhecido'
+          error: error instanceof Error ? error.message : 'Erro desconhecido',
         });
       }
     };
@@ -134,7 +136,7 @@ export class AuthMiddleware {
           userPermissions: request.user.permissions,
           ip: request.ip,
           url: request.url,
-          method: request.method
+          method: request.method,
         });
 
         return responseHelper.authorizationError(reply, `Permissão necessária: ${permission}`);
@@ -144,7 +146,7 @@ export class AuthMiddleware {
         userId: request.user.id,
         permission,
         url: request.url,
-        method: request.method
+        method: request.method,
       });
     };
   }
@@ -166,7 +168,7 @@ export class AuthMiddleware {
           requiredRole: role,
           ip: request.ip,
           url: request.url,
-          method: request.method
+          method: request.method,
         });
 
         return responseHelper.authorizationError(reply, `Role necessária: ${role}`);
@@ -176,7 +178,7 @@ export class AuthMiddleware {
         userId: request.user.id,
         role,
         url: request.url,
-        method: request.method
+        method: request.method,
       });
     };
   }
@@ -201,10 +203,13 @@ export class AuthMiddleware {
           role: request.user.role,
           ip: request.ip,
           url: request.url,
-          method: request.method
+          method: request.method,
         });
 
-        return responseHelper.authorizationError(reply, 'Acesso negado. Você só pode acessar seus próprios dados');
+        return responseHelper.authorizationError(
+          reply,
+          'Acesso negado. Você só pode acessar seus próprios dados'
+        );
       }
 
       securityLogger.info('Acesso autorizado por propriedade/admin', {
@@ -213,7 +218,7 @@ export class AuthMiddleware {
         isOwner,
         isAdmin,
         url: request.url,
-        method: request.method
+        method: request.method,
       });
     };
   }
@@ -223,7 +228,7 @@ export class AuthMiddleware {
    */
   private extractToken(request: FastifyRequest): string | null {
     const authorization = request.headers.authorization;
-    
+
     if (!authorization) {
       return null;
     }
@@ -270,7 +275,7 @@ export class AuthMiddleware {
     return async (request: FastifyRequest, reply: FastifyReply) => {
       // Primeiro, autenticar
       await this.authenticate()(request, reply);
-      
+
       if (reply.sent) return;
 
       // Depois, verificar permissão se especificada
