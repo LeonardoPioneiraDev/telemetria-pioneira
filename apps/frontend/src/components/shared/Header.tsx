@@ -1,13 +1,14 @@
-//apps/frontend/src/components/shared/Header.tsx
+// src/components/shared/Header.tsx
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { LogOut, User } from 'lucide-react';
+import { useAuthExtended } from '@/hooks/useAuthExtended'; // Usar o extended
+import { LogOut } from 'lucide-react';
 import Image from 'next/image';
+import { UserDropdown } from './UserDropdown';
 
 export const Header = () => {
-  const { logout } = useAuth();
+  const { logout } = useAuthExtended(); // Usar logout que limpa cache
 
   return (
     <header className="bg-black/95 backdrop-blur-md border-b border-yellow-400/20 shadow-lg sticky top-0 z-50">
@@ -16,7 +17,7 @@ export const Header = () => {
           {/* Logo e Título */}
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-3">
-              <div className=" bg-black rounded-lg">
+              <div className="bg-black rounded-lg">
                 <Image src="/logo.png" alt="Logo" width={60} height={60} className="rounded-lg" />
               </div>
               <div>
@@ -28,21 +29,12 @@ export const Header = () => {
 
           {/* Ações do Header */}
           <div className="flex items-center space-x-3">
-            {/* Info do usuário */}
-            <div className="hidden md:flex items-center space-x-2 text-sm text-gray-300">
-              <User className="h-4 w-4 text-yellow-400" />
-              <span>Administrador</span>
-            </div>
-            {/* Botão de configurações
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-300 hover:text-yellow-400 hover:bg-yellow-400/10 transition-all duration-200"
-            >
-              <Settings className="h-4 w-4" />
-            </Button> */}
+            {/* Dropdown do Usuário */}
+            <UserDropdown />
+
             {/* Separador */}
             <div className="h-6 w-px bg-yellow-400/30" />
+
             {/* Botão de logout */}
             <Button
               variant="ghost"

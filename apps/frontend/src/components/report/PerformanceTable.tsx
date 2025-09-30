@@ -33,6 +33,12 @@ const getBadgeVariant = (count: number) => {
   return 'destructive';
 };
 
+// Função para extrair a data de início do período para ordenação
+const extractStartDate = (period: PerformancePeriod): Date => {
+  // Usa o campo startDate que já vem da API em formato ISO
+  return new Date(period.startDate);
+};
+
 export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) => {
   // DEBUG: Vamos ver os dados que estão chegando
   console.log('🔍 DEBUG - Periods:', periods);
@@ -52,6 +58,18 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
     return hasData;
   });
 
+  // ORDENAR PERÍODOS POR DATA CRESCENTE (mais antiga primeiro)
+  const sortedPeriodsWithData = [...periodsWithData].sort((a, b) => {
+    const dateA = extractStartDate(a);
+    const dateB = extractStartDate(b);
+    return dateA.getTime() - dateB.getTime();
+  });
+
+  console.log(
+    '🔍 DEBUG - Sorted periods:',
+    sortedPeriodsWithData.map(p => p.label)
+  );
+
   // FILTRAR MÉTRICAS QUE TÊM PELO MENOS UMA OCORRÊNCIA
   const metricsWithData = metrics.filter(metric => {
     const hasData = Object.entries(metric.counts).some(([periodId, count]) => {
@@ -65,7 +83,7 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
     return hasData;
   });
 
-  console.log('🔍 DEBUG - Periods with data:', periodsWithData);
+  console.log('🔍 DEBUG - Periods with data:', sortedPeriodsWithData);
   console.log('🔍 DEBUG - Metrics with data:', metricsWithData);
 
   // Calcular total de eventos por métrica (apenas métricas com dados)
@@ -79,7 +97,7 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
   });
 
   // Se não há dados, mostrar mensagem
-  if (periodsWithData.length === 0 || metricsWithData.length === 0) {
+  if (sortedPeriodsWithData.length === 0 || metricsWithData.length === 0) {
     console.log('🔍 No data found, showing empty state');
     return (
       <Card>
@@ -109,8 +127,8 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
           Detalhamento das ocorrências por período analisado
         </p>
         <div className="text-xs text-muted-foreground mt-2">
-          Exibindo {metricsWithData.length} de {metrics.length} métricas • {periodsWithData.length}{' '}
-          de {periods.length} períodos
+          Exibindo {metricsWithData.length} de {metrics.length} métricas •{' '}
+          {sortedPeriodsWithData.length} de {periods.length} períodos
         </div>
       </CardHeader>
       <CardContent>
@@ -119,7 +137,7 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[300px] font-semibold">Tipo de Ocorrência</TableHead>
-                {periodsWithData.map(period => (
+                {sortedPeriodsWithData.map(period => (
                   <TableHead key={period.id} className="text-center font-semibold min-w-[100px]">
                     {formatTableHeader(period.label)}
                   </TableHead>
@@ -133,7 +151,7 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
                   <TableCell className="font-medium">
                     <div className="max-w-[280px] break-words">{metric.eventType}</div>
                   </TableCell>
-                  {periodsWithData.map(period => (
+                  {sortedPeriodsWithData.map(period => (
                     <TableCell key={period.id} className="text-center">
                       <Badge variant={getBadgeVariant(metric.counts[period.id] ?? 0)}>
                         {metric.counts[period.id] ?? 0}

@@ -3,7 +3,6 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import type { UserRole } from '../../../shared/constants/index.js';
 import { USER_ROLES } from '../../../shared/constants/index.js';
 import { authLogger, logger } from '../../../shared/utils/logger.js';
-import { responseHelper } from '../../../shared/utils/responseHelper.js';
 import { userModel } from '../models/User.js';
 import { authService } from '../services/authService.js';
 
@@ -108,21 +107,37 @@ export class AuthController {
         acceptTerms,
       });
 
-      return responseHelper.created(reply, result.user, result.message);
+      return reply.status(201).send({
+        success: true,
+        message: result.message,
+        data: result.user,
+      });
     } catch (error) {
       authLogger.error('Erro no registro:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('já está em uso') || error.message.includes('já existe')) {
-          return responseHelper.conflictError(reply, error.message);
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
         }
 
         if (error.message.includes('não atende aos critérios')) {
-          return responseHelper.validationError(reply, [error.message]);
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno no registro');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no registro',
+      });
     }
   }
 
@@ -133,7 +148,6 @@ export class AuthController {
     request: FastifyRequest<{ Body: LoginBody }>,
     reply: FastifyReply
   ): Promise<void> {
-    // O tipo de retorno muda para Promise<void>
     try {
       const { email, password, rememberMe } = request.body;
       const ipAddress = request.ip;
@@ -142,9 +156,7 @@ export class AuthController {
 
       const result = await authService.login({ email, password, rememberMe }, ipAddress);
 
-      // A CORREÇÃO ESTÁ AQUI:
-      // Em vez de usar o responseHelper, enviamos a resposta diretamente.
-      return reply.send({
+      return reply.status(200).send({
         success: true,
         message: 'Login realizado com sucesso',
         data: {
@@ -159,23 +171,42 @@ export class AuthController {
 
       if (error instanceof Error) {
         if (error.message.includes('Credenciais inválidas')) {
-          return responseHelper.authenticationError(reply, 'Email ou senha incorretos');
+          return reply.status(401).send({
+            success: false,
+            message: 'Email ou senha incorretos',
+            error: 'AUTHENTICATION_ERROR',
+          });
         }
 
         if (error.message.includes('bloqueada')) {
-          return responseHelper.error(reply, error.message, 423, 'ACCOUNT_LOCKED');
+          return reply.status(423).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_LOCKED',
+          });
         }
 
         if (error.message.includes('inativa') || error.message.includes('suspensa')) {
-          return responseHelper.error(reply, error.message, 403, 'ACCOUNT_DISABLED');
+          return reply.status(403).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_DISABLED',
+          });
         }
 
         if (error.message.includes('pendente')) {
-          return responseHelper.error(reply, error.message, 403, 'ACCOUNT_PENDING');
+          return reply.status(403).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_PENDING',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno no login');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no login',
+      });
     }
   }
 
@@ -193,25 +224,44 @@ export class AuthController {
 
       const result = await authService.refreshToken(refreshToken);
 
-      return responseHelper.tokenRefreshed(reply, result, 'Token renovado com sucesso');
+      return reply.status(200).send({
+        success: true,
+        message: 'Token renovado com sucesso',
+        data: result,
+      });
     } catch (error) {
       authLogger.error('Erro na renovação de token:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('expirado') || error.message.includes('inválido')) {
-          return responseHelper.authenticationError(reply, 'Token de refresh inválido ou expirado');
+          return reply.status(401).send({
+            success: false,
+            message: 'Token de refresh inválido ou expirado',
+            error: 'AUTHENTICATION_ERROR',
+          });
         }
 
         if (error.message.includes('não encontrado')) {
-          return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+          return reply.status(404).send({
+            success: false,
+            message: 'Usuário não encontrado',
+            error: 'NOT_FOUND',
+          });
         }
 
         if (error.message.includes('inativo')) {
-          return responseHelper.error(reply, 'Usuário inativo', 403, 'USER_INACTIVE');
+          return reply.status(403).send({
+            success: false,
+            message: 'Usuário inativo',
+            error: 'USER_INACTIVE',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno na renovação do token');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na renovação do token',
+      });
     }
   }
 
@@ -229,15 +279,24 @@ export class AuthController {
 
       const result = await authService.requestPasswordReset({ email });
 
-      return responseHelper.emailSent(reply, result.message);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       authLogger.error('Erro na solicitação de reset de senha:', error);
 
       if (error instanceof Error && error.message.includes('Falha ao enviar email')) {
-        return responseHelper.serverError(reply, 'Falha ao enviar email de recuperação');
+        return reply.status(500).send({
+          success: false,
+          message: 'Falha ao enviar email de recuperação',
+        });
       }
 
-      return responseHelper.serverError(reply, 'Erro interno na solicitação de reset');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na solicitação de reset',
+      });
     }
   }
 
@@ -255,25 +314,44 @@ export class AuthController {
 
       const result = await authService.resetPassword({ token, newPassword });
 
-      return responseHelper.passwordChanged(reply, result.message);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       authLogger.error('Erro no reset de senha:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('inválido') || error.message.includes('expirado')) {
-          return responseHelper.error(reply, error.message, 400, 'INVALID_RESET_TOKEN');
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'INVALID_RESET_TOKEN',
+          });
         }
 
         if (error.message.includes('não atende aos critérios')) {
-          return responseHelper.validationError(reply, [error.message]);
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
         }
 
         if (error.message.includes('deve ser diferente')) {
-          return responseHelper.error(reply, error.message, 400, 'SAME_PASSWORD');
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'SAME_PASSWORD',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno no reset de senha');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no reset de senha',
+      });
     }
   }
 
@@ -295,30 +373,44 @@ export class AuthController {
         newPassword,
       });
 
-      return responseHelper.passwordChanged(reply, result.message);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       authLogger.error('Erro na alteração de senha:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('incorreta')) {
-          return responseHelper.error(
-            reply,
-            'Senha atual incorreta',
-            400,
-            'INVALID_CURRENT_PASSWORD'
-          );
+          return reply.status(400).send({
+            success: false,
+            message: 'Senha atual incorreta',
+            error: 'INVALID_CURRENT_PASSWORD',
+          });
         }
 
         if (error.message.includes('não atende aos critérios')) {
-          return responseHelper.validationError(reply, [error.message]);
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
         }
 
         if (error.message.includes('deve ser diferente')) {
-          return responseHelper.error(reply, error.message, 400, 'SAME_PASSWORD');
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'SAME_PASSWORD',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno na alteração de senha');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na alteração de senha',
+      });
     }
   }
 
@@ -333,10 +425,16 @@ export class AuthController {
 
       const result = await authService.logout(userId);
 
-      return responseHelper.logoutSuccess(reply, result.message);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       authLogger.error('Erro no logout:', error);
-      return responseHelper.serverError(reply, 'Erro interno no logout');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no logout',
+      });
     }
   }
 
@@ -347,15 +445,27 @@ export class AuthController {
     try {
       const userId = request.user!.id;
       const profile = await authService.getProfile(userId);
-      return responseHelper.success(reply, profile, 'Perfil recuperado com sucesso');
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Perfil recuperado com sucesso',
+        data: profile,
+      });
     } catch (error) {
       logger.error('Erro ao obter perfil:', error);
 
       if (error instanceof Error && error.message.includes('não encontrado')) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
-      return responseHelper.serverError(reply, 'Erro interno ao obter perfil');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao obter perfil',
+      });
     }
   }
 
@@ -374,21 +484,36 @@ export class AuthController {
 
       const updatedProfile = await authService.updateProfile(userId, updateData);
 
-      return responseHelper.updated(reply, updatedProfile, 'Perfil atualizado com sucesso');
+      return reply.status(200).send({
+        success: true,
+        message: 'Perfil atualizado com sucesso',
+        data: updatedProfile,
+      });
     } catch (error) {
       authLogger.error('Erro ao atualizar perfil:', error);
 
       if (error instanceof Error) {
         if (error.message.includes('já está em uso')) {
-          return responseHelper.conflictError(reply, error.message);
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
         }
 
         if (error.message.includes('não encontrado')) {
-          return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+          return reply.status(404).send({
+            success: false,
+            message: 'Usuário não encontrado',
+            error: 'NOT_FOUND',
+          });
         }
       }
 
-      return responseHelper.serverError(reply, 'Erro interno ao atualizar perfil');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao atualizar perfil',
+      });
     }
   }
 
@@ -404,10 +529,17 @@ export class AuthController {
 
       const result = await authService.checkEmailExists(email);
 
-      return responseHelper.success(reply, result, 'Verificação realizada');
+      return reply.status(200).send({
+        success: true,
+        message: 'Verificação realizada',
+        data: result,
+      });
     } catch (error) {
       logger.error('Erro ao verificar email:', error);
-      return responseHelper.serverError(reply, 'Erro interno na verificação');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na verificação',
+      });
     }
   }
 
@@ -423,10 +555,17 @@ export class AuthController {
 
       const result = await authService.checkUsernameExists(username);
 
-      return responseHelper.success(reply, result, 'Verificação realizada');
+      return reply.status(200).send({
+        success: true,
+        message: 'Verificação realizada',
+        data: result,
+      });
     } catch (error) {
       logger.error('Erro ao verificar username:', error);
-      return responseHelper.serverError(reply, 'Erro interno na verificação');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na verificação',
+      });
     }
   }
 
@@ -470,27 +609,29 @@ export class AuthController {
         role: user.role,
         status: user.status,
         emailVerified: user.emailVerified,
-        lastLoginAt: user.lastLoginAt, // Será serializado para string
+        lastLoginAt: user.lastLoginAt,
         tokenVersion: user.tokenVersion,
-        createdAt: user.createdAt, // Será serializado para string
-        updatedAt: user.updatedAt, // Será serializado para string
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
       }));
 
-      return responseHelper.successWithPagination(
-        reply,
-        sanitizedUsers,
-        {
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuários recuperados com sucesso',
+        data: sanitizedUsers,
+        pagination: {
           page: result.page,
           limit: result.limit,
           total: result.total,
           totalPages: result.totalPages,
         },
-        'Usuários recuperados com sucesso'
-      );
+      });
     } catch (error) {
       logger.error('Erro ao listar usuários:', error);
-      // ✅ CORREÇÃO: Adicionar return
-      return responseHelper.serverError(reply, 'Erro interno ao listar usuários');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao listar usuários',
+      });
     }
   }
 
@@ -507,16 +648,27 @@ export class AuthController {
       const user = await userModel.findById(id);
 
       if (!user) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
       // Remover senha
       const { password, ...sanitizedUser } = user;
 
-      return responseHelper.success(reply, sanitizedUser, 'Usuário recuperado com sucesso');
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário recuperado com sucesso',
+        data: sanitizedUser,
+      });
     } catch (error) {
       logger.error('Erro ao obter usuário por ID:', error);
-      return responseHelper.serverError(reply, 'Erro interno ao obter usuário');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao obter usuário',
+      });
     }
   }
 
@@ -548,15 +700,26 @@ export class AuthController {
         temporaryPassword: result.temporaryPassword,
       };
 
-      return responseHelper.created(reply, responseData, 'Usuário criado com sucesso');
+      return reply.status(201).send({
+        success: true,
+        message: 'Usuário criado com sucesso',
+        data: responseData,
+      });
     } catch (error) {
       authLogger.error('Erro ao criar usuário:', error);
       if (error instanceof Error) {
         if (error.message.includes('já está em uso')) {
-          return responseHelper.conflictError(reply, error.message);
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
         }
       }
-      return responseHelper.serverError(reply, 'Erro interno ao criar usuário');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao criar usuário',
+      });
     }
   }
 
@@ -573,25 +736,35 @@ export class AuthController {
 
       // Medida de segurança: admin não pode resetar a própria senha por esta rota.
       if (targetUserId === adminId) {
-        return responseHelper.error(
-          reply,
-          'Você não pode resetar sua própria senha através desta função. Use a opção "Esqueci minha senha".',
-          400,
-          'CANNOT_RESET_SELF'
-        );
+        return reply.status(400).send({
+          success: false,
+          message:
+            'Você não pode resetar sua própria senha através desta função. Use a opção "Esqueci minha senha".',
+          error: 'CANNOT_RESET_SELF',
+        });
       }
 
       const result = await authService.initiatePasswordResetByAdmin(targetUserId, adminId);
 
-      return responseHelper.success(reply, null, result.message);
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
     } catch (error) {
       authLogger.error('Erro no controller de reset de senha pelo admin:', error);
 
       if (error instanceof Error && error.message.includes('não encontrado')) {
-        return responseHelper.notFoundError(reply, 'Usuário alvo não encontrado');
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário alvo não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
-      return responseHelper.serverError(reply, 'Erro interno ao tentar resetar a senha do usuário');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao tentar resetar a senha do usuário',
+      });
     }
   }
 
@@ -615,24 +788,33 @@ export class AuthController {
       // Verificar se usuário existe
       const existingUser = await userModel.findById(id);
       if (!existingUser) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
       // Verificar conflitos de email e username
       if (updateData.email) {
         const emailExists = await userModel.emailExists(updateData.email, id);
         if (emailExists) {
-          return responseHelper.conflictError(reply, 'Email já está em uso por outro usuário');
+          return reply.status(409).send({
+            success: false,
+            message: 'Email já está em uso por outro usuário',
+            error: 'CONFLICT',
+          });
         }
       }
 
       if (updateData.username) {
         const usernameExists = await userModel.usernameExists(updateData.username, id);
         if (usernameExists) {
-          return responseHelper.conflictError(
-            reply,
-            'Nome de usuário já está em uso por outro usuário'
-          );
+          return reply.status(409).send({
+            success: false,
+            message: 'Nome de usuário já está em uso por outro usuário',
+            error: 'CONFLICT',
+          });
         }
       }
 
@@ -640,16 +822,27 @@ export class AuthController {
       const updatedUser = await userModel.update(id, updateData);
 
       if (!updatedUser) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
       // Remover senha
       const { password, ...sanitizedUser } = updatedUser;
 
-      return responseHelper.updated(reply, sanitizedUser, 'Usuário atualizado com sucesso');
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário atualizado com sucesso',
+        data: sanitizedUser,
+      });
     } catch (error) {
       authLogger.error('Erro ao atualizar usuário:', error);
-      return responseHelper.serverError(reply, 'Erro interno ao atualizar usuário');
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao atualizar usuário',
+      });
     }
   }
 
@@ -670,7 +863,6 @@ export class AuthController {
 
       // Não permitir que admin delete a si mesmo
       if (id === request.user!.id) {
-        // Bypass do helper de erro
         return reply.status(400).send({
           success: false,
           message: 'Você não pode deletar sua própria conta',
@@ -681,7 +873,6 @@ export class AuthController {
       const deleted = await userModel.delete(id);
 
       if (!deleted) {
-        // Bypass do helper de erro notFound
         return reply.status(404).send({
           success: false,
           message: 'Usuário não encontrado',
@@ -689,14 +880,12 @@ export class AuthController {
         });
       }
 
-      // ✅ TESTE DE ISOLAMENTO: Resposta direta sem responseHelper
       return reply.status(200).send({
         success: true,
         message: 'Usuário deletado com sucesso',
       });
     } catch (error) {
       authLogger.error('Erro ao deletar usuário:', error);
-      // Bypass do helper de erro de servidor
       return reply.status(500).send({
         success: false,
         message: 'Erro interno ao deletar usuário',

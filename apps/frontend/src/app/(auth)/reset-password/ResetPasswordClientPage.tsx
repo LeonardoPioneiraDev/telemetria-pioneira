@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/app/(auth)/reset-password/ResetPasswordClientPage.tsx
 'use client';
 

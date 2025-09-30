@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 //apps/frontend/src/components/report/PerformanceChart.tsx
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -108,7 +109,7 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
   });
 
   const chartData = metricsWithData.map(metric => {
-    const dataPoint: { name: string; [key: string]: number } = {
+    const dataPoint: { [key: string]: string | number } = {
       name: metric.eventType.replace('(Tr) ', ''),
     };
 
@@ -124,7 +125,7 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
       ...acc,
       [period.label]: COLORS[index % COLORS.length],
     }),
-    {}
+    {} as Record<string, string>
   );
 
   return (
@@ -161,7 +162,12 @@ export const PerformanceChart = ({ periods, metrics }: PerformanceChartProps) =>
                     fontSize: 14,
                     fontWeight: 'bold',
                     fill: 'black',
-                    formatter: (value: number) => (value > 0 ? value : ''),
+                    formatter: (value: unknown) => {
+                      if (typeof value === 'number' && value > 0) {
+                        return value;
+                      }
+                      return '';
+                    },
                   }}
                 />
               ))}

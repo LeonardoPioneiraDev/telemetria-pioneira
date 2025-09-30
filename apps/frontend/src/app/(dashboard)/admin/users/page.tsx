@@ -10,12 +10,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { UserDialog } from './components/UserDialog';
 import { UserFilters } from './components/UserFilters';
 import { UserTable } from './components/UserTable';
-import { useUsers } from './hooks/useUsers';
+import { CreateUserData, UpdateUserData, useUsers } from './hooks/useUsers';
 
 export default function UsersManagementPage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-
+  const [filters, setFilters] = useState({
+    search: '',
+    role: 'all',
+    status: 'all',
+  });
   const {
     users,
     loading,
@@ -27,11 +31,40 @@ export default function UsersManagementPage() {
     resetUserPassword,
   } = useUsers();
 
-  const [filters, setFilters] = useState({
-    search: '',
-    role: 'all',
-    status: 'all',
-  });
+  // Filtrar usuários baseado nos filtros aplicados
+  const filteredUsers = useMemo(() => {
+    return users.filter(user => {
+      const matchesSearch =
+        user.fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
+        user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
+        user.username.toLowerCase().includes(filters.search.toLowerCase());
+
+      const matchesRole = filters.role === 'all' || user.role === filters.role;
+
+      const matchesStatus =
+        filters.status === 'all' ||
+        (filters.status === 'active' && user.status === 'active') ||
+        (filters.status === 'inactive' && user.status !== 'active');
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, filters]);
+
+  // Estatísticas dos usuários
+  const stats = useMemo(() => {
+    const totalUsers = users.length;
+    const activeUsers = users.filter(u => u.status === 'active').length;
+    const adminUsers = users.filter(u => u.role === 'admin').length;
+    const regularUsers = users.filter(u => u.role === 'user').length;
+
+    return {
+      total: totalUsers,
+      active: activeUsers,
+      inactive: totalUsers - activeUsers,
+      admins: adminUsers,
+      regular: regularUsers,
+    };
+  }, [users]);
 
   // 🔧 VERIFICAÇÃO DE PERMISSÃO MELHORADA
   useEffect(() => {
@@ -120,41 +153,6 @@ export default function UsersManagementPage() {
     );
   }
 
-  // Filtrar usuários baseado nos filtros aplicados
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const matchesSearch =
-        user.fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.username.toLowerCase().includes(filters.search.toLowerCase());
-
-      const matchesRole = filters.role === 'all' || user.role === filters.role;
-
-      const matchesStatus =
-        filters.status === 'all' ||
-        (filters.status === 'active' && user.status === 'active') ||
-        (filters.status === 'inactive' && user.status !== 'active');
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [users, filters]);
-
-  // Estatísticas dos usuários
-  const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter(u => u.status === 'active').length;
-    const adminUsers = users.filter(u => u.role === 'admin').length;
-    const regularUsers = users.filter(u => u.role === 'user').length;
-
-    return {
-      total: totalUsers,
-      active: activeUsers,
-      inactive: totalUsers - activeUsers,
-      admins: adminUsers,
-      regular: regularUsers,
-    };
-  }, [users]);
-
   if (error) {
     return (
       <div className="container mx-auto py-8">
@@ -168,7 +166,7 @@ export default function UsersManagementPage() {
           </CardHeader>
           <CardContent>
             <Button
-              onClick={fetchUsers}
+              onClick={() => fetchUsers()}
               variant="outline"
               className="border-red-300 text-red-700 hover:bg-red-100"
             >
@@ -180,6 +178,12 @@ export default function UsersManagementPage() {
       </div>
     );
   }
+
+  const handleCreateUser = (data: CreateUserData | UpdateUserData) => {
+    // Como este diálogo específico é para criação, nós podemos afirmar
+    // com segurança para o TypeScript que os dados estarão no formato `CreateUserData`.
+    return createUser(data as CreateUserData);
+  };
 
   return (
     <div className="container mx-auto py-8 space-y-6">
@@ -200,7 +204,7 @@ export default function UsersManagementPage() {
         <div className="flex items-center space-x-3">
           <Button
             variant="outline"
-            onClick={fetchUsers}
+            onClick={() => fetchUsers()}
             disabled={loading}
             className="flex items-center space-x-2"
           >
@@ -208,7 +212,7 @@ export default function UsersManagementPage() {
             <span>Atualizar</span>
           </Button>
 
-          <UserDialog onSave={createUser} />
+          <UserDialog onSave={handleCreateUser} />
         </div>
       </div>
 
