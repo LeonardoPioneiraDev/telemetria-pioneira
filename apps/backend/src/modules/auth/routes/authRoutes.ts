@@ -376,7 +376,10 @@ export async function authRoutes(fastify: FastifyInstance) {
               email: z.string().email({ message: 'Email inválido' }),
               username: z
                 .string()
-                .min(3, { message: 'Nome de usuário deve ter pelo menos 3 caracteres' }),
+                .min(3)
+                .regex(/^[a-zA-Z0-9_]+$/, {
+                  message: 'Nome de usuário pode conter apenas letras, números e underscore (_).',
+                }),
               fullName: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
               // 4. Deixar a senha opcional, como planejamos
               password: z
@@ -387,7 +390,6 @@ export async function authRoutes(fastify: FastifyInstance) {
               status: z.enum(['active', 'inactive', 'pending']).default('active'),
               sendWelcomeEmail: z.boolean().default(true),
             }),
-            // Você também pode definir o schema de resposta com Zod para garantir consistência
             response: {
               201: z.object({
                 success: z.boolean(),
@@ -446,18 +448,21 @@ export async function authRoutes(fastify: FastifyInstance) {
           preHandler: [
             authMiddleware.authenticate(),
             authMiddleware.requirePermission(USER_PERMISSIONS.USER_DELETE),
-            authValidators.validateId(),
+            // authValidators.validateId() foi REMOVIDO daqui
           ],
           schema: {
             description: 'Deletar usuário (Admin)',
             tags: ['Administração'],
             security: [{ bearerAuth: [] }],
-            params: {
-              type: 'object',
-              required: ['id'],
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-              },
+            // ✅ CORRIGIDO para usar Zod
+            params: z.object({
+              id: z.string().uuid({ message: 'O ID do usuário deve ser um UUID válido.' }),
+            }),
+            response: {
+              200: z.object({
+                success: z.boolean(),
+                message: z.string(),
+              }),
             },
           },
         },

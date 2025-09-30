@@ -39,7 +39,7 @@ import { UserDialog } from './UserDialog';
 interface UserTableProps {
   users: User[];
   loading: boolean;
-  onUpdateUser: (userId: string, data: any) => Promise<boolean>;
+  onUpdateUser: (userId: string, data: unknown) => Promise<boolean>;
   onDeleteUser: (userId: string) => Promise<boolean>;
   onResetPassword: (userId: string) => Promise<boolean>;
 }
@@ -76,7 +76,7 @@ export function UserTable({
     );
   };
 
-  const getStatusBadge = (isActive: boolean) => {
+  const getStatusBadge = (isActive: string) => {
     if (isActive) {
       return (
         <Badge variant="default" className="bg-green-500 hover:bg-green-600">
@@ -145,7 +145,7 @@ export function UserTable({
                     {user.fullName.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <div className="font-medium text-gray-900">{user.name}</div>
+                    <div className="font-medium text-gray-900">{user.fullName}</div>
                     <div className="flex items-center space-x-1 text-sm text-gray-500">
                       <Mail className="h-3 w-3" />
                       <span>{user.email}</span>
@@ -154,7 +154,7 @@ export function UserTable({
                 </div>
               </TableCell>
               <TableCell>{getRoleBadge(user.role)}</TableCell>
-              <TableCell>{getStatusBadge(user.isActive)}</TableCell>
+              <TableCell>{getStatusBadge(user.status)}</TableCell>
               <TableCell>
                 <div className="flex items-center space-x-1 text-sm text-gray-500">
                   <Calendar className="h-3 w-3" />

@@ -60,7 +60,7 @@ export function DeleteUserDialog({ user, onDelete }: DeleteUserDialogProps) {
             <div>
               <h4 className="font-medium text-red-800">Usuário a ser excluído:</h4>
               <p className="text-sm text-red-700 mt-1">
-                <strong>{user.name}</strong> ({user.email})
+                <strong>{user.fullName}</strong> ({user.email})
               </p>
               <p className="text-xs text-red-600 mt-1">
                 Permissão: {user.role === 'admin' ? 'Administrador' : 'Usuário'}

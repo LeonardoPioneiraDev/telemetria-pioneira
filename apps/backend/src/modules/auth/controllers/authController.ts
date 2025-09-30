@@ -668,33 +668,39 @@ export class AuthController {
         targetUserId: id,
       });
 
-      // Verificar se usuário existe
-      const existingUser = await userModel.findById(id);
-      if (!existingUser) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
-      }
-
       // Não permitir que admin delete a si mesmo
       if (id === request.user!.id) {
-        return responseHelper.error(
-          reply,
-          'Você não pode deletar sua própria conta',
-          400,
-          'CANNOT_DELETE_SELF'
-        );
+        // Bypass do helper de erro
+        return reply.status(400).send({
+          success: false,
+          message: 'Você não pode deletar sua própria conta',
+          error: 'CANNOT_DELETE_SELF',
+        });
       }
 
-      // Deletar usuário
       const deleted = await userModel.delete(id);
 
       if (!deleted) {
-        return responseHelper.notFoundError(reply, 'Usuário não encontrado');
+        // Bypass do helper de erro notFound
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
       }
 
-      return responseHelper.deleted(reply, 'Usuário deletado com sucesso');
+      // ✅ TESTE DE ISOLAMENTO: Resposta direta sem responseHelper
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário deletado com sucesso',
+      });
     } catch (error) {
       authLogger.error('Erro ao deletar usuário:', error);
-      return responseHelper.serverError(reply, 'Erro interno ao deletar usuário');
+      // Bypass do helper de erro de servidor
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao deletar usuário',
+      });
     }
   }
 }
