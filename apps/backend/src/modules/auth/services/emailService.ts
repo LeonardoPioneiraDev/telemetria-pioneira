@@ -1,3 +1,4 @@
+//apps/backend/src/modules/auth/services/emailService.ts
 import { emailService as emailConfig } from '../../../config/email.js';
 import { environment } from '../../../config/environment.js';
 import { emailLogger } from '../../../shared/utils/logger.js';

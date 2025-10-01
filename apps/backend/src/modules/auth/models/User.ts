@@ -1,3 +1,4 @@
+//apps/backend/src/modules/auth/models/User.ts
 import { database } from '../../../config/database.js';
 import type { UserPermission, UserRole, UserStatus } from '../../../shared/constants/index.js';
 import { ROLE_PERMISSIONS, USER_ROLES, USER_STATUS } from '../../../shared/constants/index.js';
