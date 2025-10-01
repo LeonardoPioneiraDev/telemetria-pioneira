@@ -1,3 +1,6 @@
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 import { environment } from '@/config/environment.js';
 import { initializeDataSource } from '@/data-source.js';
 import { logger } from '@/shared/utils/logger.js';

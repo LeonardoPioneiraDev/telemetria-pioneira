@@ -1,47 +1,55 @@
-// src/entities/telemetry-event.entity.ts
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 
 @Entity('telemetry_events')
 export class TelemetryEvent {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  @Column({ type: 'bigint', unique: true })
-  external_id!: string;
+  @Column({ type: 'bigint', unique: true, comment: 'ID do evento na API da MiX' })
+  external_id!: bigint;
 
-  @Column({ type: 'bigint' })
-  driver_external_id!: string;
+  @Column({ type: 'bigint', nullable: true, comment: 'ID externo do motorista na API MiX' })
+  driver_external_id!: bigint | null;
 
-  @Column({ type: 'bigint' })
-  vehicle_external_id!: string;
+  @Column({ type: 'bigint', nullable: true, comment: 'ID externo do veículo (asset) na API MiX' })
+  vehicle_external_id!: bigint | null;
 
-  @Column({ type: 'bigint' })
-  event_type_external_id!: string;
+  @Column({ type: 'bigint', nullable: true, comment: 'ID externo do tipo de evento na API MiX' })
+  event_type_external_id!: bigint | null;
 
-  @Column({ type: 'timestamptz' })
-  occurred_at!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  event_timestamp!: Date | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
-  latitude!: number;
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  latitude!: number | null;
 
-  @Column({ type: 'decimal', precision: 9, scale: 6, nullable: true })
-  longitude!: number;
-
-  @Column({ type: 'decimal', precision: 10, scale: 3, nullable: true })
-  speed_kmh!: number;
+  @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
+  longitude!: number | null;
 
   @Column({ type: 'decimal', precision: 8, scale: 2, nullable: true })
-  speed_limit_kmh!: number;
+  speed!: number | null;
 
-  @Column({ type: 'decimal', precision: 12, scale: 3, nullable: true })
-  odometer_km!: number;
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  heading!: number | null;
 
-  @Column({ type: 'decimal', precision: 14, scale: 4, nullable: true })
-  value!: number;
+  @Column({ type: 'text', nullable: true })
+  location_description!: string | null;
 
-  @Column({ type: 'jsonb' })
-  raw_data!: object;
+  @Column({ type: 'jsonb', nullable: true, comment: 'Dados adicionais do evento' })
+  additional_data!: object | null;
+
+  @Column({ type: 'jsonb', nullable: true, comment: 'Payload original completo da API' })
+  raw_data!: object | null;
 
   @CreateDateColumn()
   created_at!: Date;
+
+  @UpdateDateColumn()
+  updated_at!: Date;
 }

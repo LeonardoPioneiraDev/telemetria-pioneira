@@ -1,10 +1,8 @@
 //apps/backend/src/entities/driver.entity.ts
-import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,7 +13,7 @@ export class Driver {
   id!: number;
 
   @Column({ type: 'bigint', unique: true, comment: 'ID do motorista na API da MiX' })
-  external_id!: number;
+  external_id!: bigint;
 
   @Column({ type: 'varchar', length: 255 })
   name!: string;
@@ -34,7 +32,4 @@ export class Driver {
 
   @UpdateDateColumn()
   updated_at!: Date;
-
-  @OneToMany(() => TelemetryEvent, event => event.driver)
-  events!: TelemetryEvent[];
 }

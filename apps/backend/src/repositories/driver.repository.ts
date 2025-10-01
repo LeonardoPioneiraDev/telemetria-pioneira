@@ -27,14 +27,15 @@ export class DriverRepository extends BaseRepository<Driver> {
   /**
    * Atualiza um motorista existente com base em seu ID externo.
    */
-  async updateByExternalId(externalId: number, data: DeepPartial<Driver>): Promise<void> {
+  async updateByExternalId(externalId: bigint, data: DeepPartial<Driver>): Promise<void> {
+    // ALTERADO
     await this.repository.update({ external_id: externalId }, data);
   }
   /**
    * Busca entidades por uma lista de IDs externos.
    * @param externalIds Array de IDs externos.
    */
-  async findByExternalIds(externalIds: number[]): Promise<any[]> {
+  async findByExternalIds(externalIds: bigint[]): Promise<Driver[]> {
     if (externalIds.length === 0) {
       return [];
     }

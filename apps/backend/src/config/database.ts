@@ -1,6 +1,6 @@
 import { Pool, PoolConfig } from 'pg';
-import { environment } from './environment.js';
 import { logger } from '../shared/utils/logger.js';
+import { environment } from './environment.js';
 
 export class DatabaseConfig {
   private static instance: DatabaseConfig;
@@ -30,32 +30,34 @@ export class DatabaseConfig {
         max: environment.database.maxConnections,
         connectionTimeoutMillis: environment.database.connectionTimeout,
         query_timeout: environment.database.queryTimeout,
-        ssl: environment.database.ssl ? {
-          rejectUnauthorized: false
-        } : false,
-        application_name: 'telemetria-pioneira-backend'
+        ssl: environment.database.ssl
+          ? {
+              rejectUnauthorized: false,
+            }
+          : false,
+        application_name: 'telemetria-pioneira-backend',
       };
 
       this.pool = new Pool(config);
 
       // Event listeners para monitoramento
-      this.pool.on('connect', (client) => {
+      this.pool.on('connect', () => {
         if (environment.log.debug.database) {
           logger.debug('🔌 Nova conexão estabelecida com o banco de dados');
         }
       });
 
-      this.pool.on('error', (err, client) => {
+      this.pool.on('error', err => {
         logger.error('❌ Erro inesperado no cliente do banco de dados:', err);
       });
 
-      this.pool.on('acquire', (client) => {
+      this.pool.on('acquire', () => {
         if (environment.log.performance.connections) {
           logger.debug('🔗 Cliente do pool adquirido');
         }
       });
 
-      this.pool.on('release', (err, client) => {
+      this.pool.on('release', err => {
         if (err) {
           logger.error('❌ Erro ao liberar cliente do pool:', err);
         } else if (environment.log.performance.connections) {
@@ -68,7 +70,6 @@ export class DatabaseConfig {
 
       logger.info('✅ Conexão com banco de dados estabelecida com sucesso');
       return this.pool;
-
     } catch (error) {
       logger.error('❌ Erro ao conectar com o banco de dados:', error);
       throw error;
@@ -88,7 +89,7 @@ export class DatabaseConfig {
       if (environment.log.debug.database) {
         logger.debug('🔍 Teste de conexão realizado:', {
           currentTime: result.rows[0].current_time,
-          version: result.rows[0].version.split(' ')[0]
+          version: result.rows[0].version.split(' ')[0],
         });
       }
 
@@ -105,17 +106,20 @@ export class DatabaseConfig {
     }
 
     const start = Date.now();
-    
+
     try {
       const result = await this.pool.query(text, params);
       const duration = Date.now() - start;
 
       // Log de queries lentas
-      if (environment.log.performance.slowQueries && duration > environment.log.performance.slowQueryThreshold) {
+      if (
+        environment.log.performance.slowQueries &&
+        duration > environment.log.performance.slowQueryThreshold
+      ) {
         logger.warn('🐌 Query lenta detectada:', {
           query: text,
           duration: `${duration}ms`,
-          params: params ? '[HIDDEN]' : undefined
+          params: params ? '[HIDDEN]' : undefined,
         });
       }
 
@@ -123,7 +127,7 @@ export class DatabaseConfig {
         logger.debug('📊 Query executada:', {
           query: text.substring(0, 100) + (text.length > 100 ? '...' : ''),
           duration: `${duration}ms`,
-          rowCount: result.rowCount
+          rowCount: result.rowCount,
         });
       }
 
@@ -133,7 +137,7 @@ export class DatabaseConfig {
       logger.error('❌ Erro na execução da query:', {
         query: text,
         duration: `${duration}ms`,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
       });
       throw error;
     }
@@ -162,7 +166,7 @@ export class DatabaseConfig {
     return {
       totalCount: this.pool.totalCount,
       idleCount: this.pool.idleCount,
-      waitingCount: this.pool.waitingCount
+      waitingCount: this.pool.waitingCount,
     };
   }
 
@@ -174,7 +178,7 @@ export class DatabaseConfig {
       const start = Date.now();
       await this.testConnection();
       const responseTime = Date.now() - start;
-      
+
       const poolInfo = this.getPoolInfo();
 
       return {
@@ -183,8 +187,8 @@ export class DatabaseConfig {
           responseTime: `${responseTime}ms`,
           pool: poolInfo,
           database: environment.database.name,
-          host: environment.database.host
-        }
+          host: environment.database.host,
+        },
       };
     } catch (error) {
       return {
@@ -192,8 +196,8 @@ export class DatabaseConfig {
         details: {
           error: error instanceof Error ? error.message : 'Erro desconhecido',
           database: environment.database.name,
-          host: environment.database.host
-        }
+          host: environment.database.host,
+        },
       };
     }
   }

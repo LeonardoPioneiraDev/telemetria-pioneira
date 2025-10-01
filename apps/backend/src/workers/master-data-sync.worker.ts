@@ -50,7 +50,7 @@ export class MasterDataSyncWorker {
 
     const promises = driversFromApi.map(driverData => {
       const dataToSave = {
-        external_id: driverData.DriverId,
+        external_id: BigInt(driverData.DriverId),
         name: driverData.Name,
         employee_number: driverData.EmployeeNumber,
         is_system_driver: driverData.IsSystemDriver,
@@ -58,7 +58,7 @@ export class MasterDataSyncWorker {
       };
 
       if (existingIds.has(String(driverData.DriverId))) {
-        return this.driverRepository.updateByExternalId(driverData.DriverId, dataToSave);
+        return this.driverRepository.updateByExternalId(BigInt(driverData.DriverId), dataToSave); // ALTERADO
       } else {
         return this.driverRepository.create(dataToSave);
       }
@@ -81,7 +81,7 @@ export class MasterDataSyncWorker {
 
     const promises = vehiclesFromApi.map(vehicleData => {
       const dataToSave = {
-        external_id: vehicleData.AssetId,
+        external_id: BigInt(vehicleData.AssetId),
         description: vehicleData.Description,
         registration_number: vehicleData.RegistrationNumber,
         fleet_number: vehicleData.FleetNumber,
@@ -92,7 +92,7 @@ export class MasterDataSyncWorker {
       };
 
       if (existingIds.has(String(vehicleData.AssetId))) {
-        return this.vehicleRepository.updateByExternalId(vehicleData.AssetId, dataToSave);
+        return this.vehicleRepository.updateByExternalId(BigInt(vehicleData.AssetId), dataToSave);
       } else {
         return this.vehicleRepository.create(dataToSave);
       }
@@ -115,7 +115,7 @@ export class MasterDataSyncWorker {
 
     const promises = eventTypesFromApi.map(eventTypeData => {
       const dataToSave = {
-        external_id: eventTypeData.EventTypeId,
+        external_id: BigInt(eventTypeData.EventTypeId),
         description: eventTypeData.Description,
         event_type_name: eventTypeData.EventType,
         display_units: eventTypeData.DisplayUnits,
@@ -123,7 +123,10 @@ export class MasterDataSyncWorker {
       };
 
       if (existingIds.has(String(eventTypeData.EventTypeId))) {
-        return this.eventTypeRepository.updateByExternalId(eventTypeData.EventTypeId, dataToSave);
+        return this.eventTypeRepository.updateByExternalId(
+          BigInt(eventTypeData.EventTypeId),
+          dataToSave
+        );
       } else {
         return this.eventTypeRepository.create(dataToSave);
       }

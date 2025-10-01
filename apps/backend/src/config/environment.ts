@@ -1,3 +1,4 @@
+//apps/backend/src/config/environment.ts
 import { config } from 'dotenv';
 import type { EnvironmentConfig } from '../../types/environment.js';
 
@@ -16,7 +17,7 @@ export const environment: EnvironmentConfig = {
     port: parseInt(process.env.DATABASE_PORT || '5435'),
     username: process.env.DATABASE_USERNAME || 'telemetria',
     password: process.env.DATABASE_PASSWORD || 'telemetria123',
-    name: process.env.DATABASE_NAME || 'telemetriaPioneira_db', // ✅ Corrigido
+    name: process.env.DATABASE_NAME || 'telemetriaPioneira_db',
     schema: process.env.DATABASE_SCHEMA || 'public',
     synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
     logging: process.env.DATABASE_LOGGING === 'true',

@@ -5,6 +5,9 @@ import { environment } from '../config/environment.js';
 import { logger } from '../shared/utils/logger.js';
 import { passwordService } from '../shared/utils/password.js';
 
+interface ExecutedMigrationRow {
+  filename: string;
+}
 export class DatabaseMigrator {
   private static instance: DatabaseMigrator;
 
@@ -267,7 +270,7 @@ export class DatabaseMigrator {
       // Obter migrações executadas
       const executedQuery = 'SELECT filename FROM migrations ORDER BY executed_at';
       const executedResult = await database.query(executedQuery);
-      const executed = executedResult.rows.map(row => row.filename);
+      const executed = executedResult.rows.map((row: ExecutedMigrationRow) => row.filename);
 
       // Lista de todas as migrações disponíveis
       const allMigrations = ['001_create_users_table.sql'];

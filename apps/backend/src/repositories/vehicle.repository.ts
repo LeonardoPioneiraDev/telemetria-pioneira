@@ -24,7 +24,7 @@ export class VehicleRepository extends BaseRepository<Vehicle> {
    * Busca entidades por uma lista de IDs externos.
    * @param externalIds Array de IDs externos.
    */
-  async findByExternalIds(externalIds: number[]): Promise<any[]> {
+  async findByExternalIds(externalIds: bigint[]): Promise<Vehicle[]> {
     if (externalIds.length === 0) {
       return [];
     }
@@ -39,7 +39,8 @@ export class VehicleRepository extends BaseRepository<Vehicle> {
    * @param externalId O ID externo do veículo.
    * @param data Os novos dados a serem atualizados.
    */
-  async updateByExternalId(externalId: number, data: DeepPartial<Vehicle>): Promise<void> {
+  async updateByExternalId(externalId: bigint, data: DeepPartial<Vehicle>): Promise<void> {
+    // ALTERADO
     await this.repository.update({ external_id: externalId }, data);
   }
 

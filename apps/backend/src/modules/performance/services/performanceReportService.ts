@@ -53,7 +53,7 @@ export class PerformanceReportService {
     driverId: number,
     windowStartDate: Date,
     windowEndDate: Date,
-    reportDetailsReferenceDate: Date // Data usada para formatar o reportDateFormatted
+    reportDetailsReferenceDate: Date
   ) {
     logger.info(
       `Processando relatório para motorista ID: ${driverId} entre ${windowStartDate.toISOString()} e ${windowEndDate.toISOString()}`
@@ -68,32 +68,39 @@ export class PerformanceReportService {
       where: { classification: 'Infração de Condução' },
       order: { description: 'ASC' },
     });
-    const eventTypeIds = infractionTypes.map(t => t.external_id.toString());
+    // Convertemos para bigint para garantir a comparação correta com o banco
+    const eventTypeIds = infractionTypes.map(t => BigInt(t.external_id));
 
+    // ✅ Query corrigida para usar JOIN manual e getRawMany()
     const allEventsInWindow = await this.telemetryEventRepository.repository
       .createQueryBuilder('event')
-      .select(['event.event_type_external_id', 'event.occurred_at'])
-      .where('event.driver_external_id = :driverExternalId', {
-        driverExternalId: String(driver.external_id),
+      // 1. Fazemos o JOIN manual usando os campos de external_id
+      .leftJoin(EventType, 'eventType', 'eventType.external_id = event.event_type_external_id')
+      .leftJoin(Driver, 'driver', 'driver.external_id = event.driver_external_id')
+      // 2. Selecionamos os campos que precisamos, usando aliases para clareza
+      .select([
+        'event.event_timestamp AS "event_timestamp"',
+        'event.event_type_external_id AS "event_type_external_id"',
+      ])
+      .where('driver.external_id = :driverExternalId', {
+        driverExternalId: driver.external_id,
       })
       .andWhere('event.event_type_external_id IN (:...eventTypeIds)', { eventTypeIds })
-      .andWhere('event.occurred_at >= :windowStartDate', { windowStartDate })
-      .andWhere('event.occurred_at <= :windowEndDate', { windowEndDate })
-      .getMany();
+      .andWhere('event.event_timestamp >= :windowStartDate', { windowStartDate })
+      .andWhere('event.event_timestamp <= :windowEndDate', { windowEndDate })
+      .getRawMany(); // 3. Usamos getRawMany para obter um resultado simples
 
     if (allEventsInWindow.length === 0) {
       return this._buildEmptyReport(driver, reportDetailsReferenceDate);
     }
 
-    // NOVA LÓGICA: Gera os períodos com a regra de negócio fixa.
     const groupedPeriods = this._generateFixedPeriods(
       reportDetailsReferenceDate,
       allEventsInWindow
     );
-
-    // Ordena do mais recente para o mais antigo para exibição no frontend.
     groupedPeriods.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
 
+    // ✅ Ajustamos a chamada para a nova estrutura de 'allEventsInWindow'
     const metrics = await this.calculateMetricsForPeriods(
       groupedPeriods,
       infractionTypes,
@@ -273,7 +280,7 @@ export class PerformanceReportService {
   }
 
   private _isEventInPeriod(event: any, periodStartDate: Date, periodEndDate: Date): boolean {
-    const eventOccurredAt = new Date(event.occurred_at);
+    const eventOccurredAt = new Date(event.event_timestamp);
     return (
       eventOccurredAt.getTime() >= periodStartDate.getTime() &&
       eventOccurredAt.getTime() <= periodEndDate.getTime()
@@ -296,7 +303,8 @@ export class PerformanceReportService {
       for (const period of periods) {
         const count = allEventsInWindow.filter(
           event =>
-            event.event_type_external_id === infractionType.external_id.toString() &&
+            // ✅ Acessamos a propriedade diretamente do resultado 'raw'
+            BigInt(event.event_type_external_id) === BigInt(infractionType.external_id) &&
             this._isEventInPeriod(event, period.startDate, period.endDate)
         ).length;
 

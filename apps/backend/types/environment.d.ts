@@ -1,3 +1,4 @@
+//apps/backend/types/environment.d.ts
 export interface DatabaseConfig {
   type: string;
   host: string;
@@ -137,6 +138,7 @@ export interface EnvironmentConfig {
     password: string;
     fullName: string;
   };
+
   frontend: {
     url: string;
   };
@@ -171,5 +173,18 @@ export interface EnvironmentConfig {
     seedDatabase: boolean;
     resetDatabase: boolean;
     createSampleUsers: boolean;
+  };
+  redis: {
+    enabled: boolean;
+    host: string;
+    port: number;
+    password?: string | undefined;
+    db: number;
+  };
+  mixApi: {
+    username: string;
+    password: string;
+    basicAuthToken: string;
+    scope: string;
   };
 }

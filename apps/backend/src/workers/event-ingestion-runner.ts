@@ -1,7 +1,7 @@
 import { environment } from '@/config/environment.js';
 import { initializeDataSource } from '@/data-source.js';
 import { logger } from '@/shared/utils/logger.js';
-import { Worker } from 'bullmq';
+import { Queue, Worker } from 'bullmq';
 
 // Importando a lógica do worker e TODAS as suas dependências
 import { DriverRepository } from '@/repositories/driver.repository.js';
@@ -30,6 +30,8 @@ async function startWorker() {
     const vehicleRepo = new VehicleRepository();
     const eventTypeRepo = new EventTypeRepository();
 
+    const masterDataQueue = new Queue('master-data-sync', { connection });
+
     const worker = new Worker(
       'event-ingestion',
       async job => {
@@ -42,13 +44,15 @@ async function startWorker() {
           telemetryEventRepo,
           driverRepo,
           vehicleRepo,
-          eventTypeRepo
+          eventTypeRepo,
+          masterDataQueue
         );
 
         await ingestionWorker.run();
         return { status: 'Completed' };
       },
-      { connection }
+
+      { connection, lockDuration: 300000 }
     );
 
     worker.on('completed', job => logger.info(`✅ Job de ingestão #${job.id} concluído.`));

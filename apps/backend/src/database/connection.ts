@@ -1,6 +1,10 @@
 import { database } from '../config/database.js';
-import { logger } from '../shared/utils/logger.js';
 import { environment } from '../config/environment.js';
+import { logger } from '../shared/utils/logger.js';
+
+interface TableRow {
+  table_name: string;
+}
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection;
@@ -34,7 +38,6 @@ export class DatabaseConnection {
       if (environment.cleanup.enabled) {
         await this.performCleanup();
       }
-
     } catch (error) {
       logger.error('❌ Erro ao inicializar conexão com banco de dados:', error);
       throw error;
@@ -53,9 +56,9 @@ export class DatabaseConnection {
         WHERE table_schema = 'public' 
         AND table_type = 'BASE TABLE'
       `;
-      
+
       const tablesResult = await database.query(tablesQuery);
-      const tables = tablesResult.rows.map(row => row.table_name);
+      const tables = tablesResult.rows.map((row: TableRow) => row.table_name);
 
       if (tables.includes('users')) {
         logger.info('✅ Tabela users encontrada');
@@ -67,17 +70,16 @@ export class DatabaseConnection {
       if (tables.includes('users')) {
         const statsQuery = 'SELECT * FROM user_stats';
         const statsResult = await database.query(statsQuery);
-        
+
         if (statsResult.rows.length > 0) {
           const stats = statsResult.rows[0];
           logger.info('📊 Estatísticas do banco:', {
             totalUsers: stats.total_users,
             activeUsers: stats.active_users,
-            adminUsers: stats.admin_users
+            adminUsers: stats.admin_users,
           });
         }
       }
-
     } catch (error) {
       logger.warn('⚠️ Falha nas verificações de saúde do banco:', error);
     }
@@ -106,7 +108,6 @@ export class DatabaseConnection {
         const result = await database.query(cleanupQuery);
         logger.info(`🧹 ${result.rowCount} contas desbloqueadas`);
       }
-
     } catch (error) {
       logger.warn('⚠️ Falha na limpeza automática:', error);
     }
@@ -134,14 +135,14 @@ export class DatabaseConnection {
         database: {
           host: environment.database.host,
           port: environment.database.port,
-          name: environment.database.name
-        }
+          name: environment.database.name,
+        },
       };
     } catch (error) {
       logger.error('Erro ao obter informações da conexão:', error);
       return {
         isConnected: false,
-        error: error instanceof Error ? error.message : 'Erro desconhecido'
+        error: error instanceof Error ? error.message : 'Erro desconhecido',
       };
     }
   }
