@@ -1,4 +1,4 @@
-import Fastify, { FastifyInstance } from 'fastify';
+import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { emailService } from './config/email.js';
 import { environment } from './config/environment.js';
 import { databaseConnection } from './database/connection.js';
@@ -18,9 +18,22 @@ import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { userRoutes } from './modules/users/routes/userRoutes.js';
 
+// Extender o tipo FastifyRequest para incluir startTime
+declare module 'fastify' {
+  interface FastifyRequest {
+    startTime?: number;
+  }
+}
+
 export class Application {
   private static instance: Application;
-  private fastify: FastifyInstance;
+  private fastify: FastifyInstance<
+    any, // Server
+    any, // Request
+    any, // Response
+    any, // Logger
+    ZodTypeProvider
+  >;
   private isInitialized: boolean = false;
 
   private constructor() {
@@ -92,10 +105,17 @@ export class Application {
   private async registerEssentialPlugins(): Promise<void> {
     // Helmet para segurança
     if (environment.helmet.enabled) {
-      await this.fastify.register(helmet, {
-        contentSecurityPolicy: environment.helmet.cspEnabled ? undefined : false,
+      // Correção: usar objeto condicional sem undefined
+      const helmetOptions: any = {
         crossOriginEmbedderPolicy: environment.helmet.crossOriginEmbedderPolicy,
-      });
+      };
+
+      // Só adicionar contentSecurityPolicy se for false
+      if (!environment.helmet.cspEnabled) {
+        helmetOptions.contentSecurityPolicy = false;
+      }
+
+      await this.fastify.register(helmet, helmetOptions);
       logger.info('🛡️ Helmet configurado');
     }
 
@@ -114,11 +134,11 @@ export class Application {
    * Configurar middlewares
    */
   private async setupMiddlewares(): Promise<void> {
-    // CORS
-    await corsConfig.registerCors(this.fastify);
+    // CORS - cast para 'any' para resolver incompatibilidade de tipos
+    await corsConfig.registerCors(this.fastify as any);
 
-    // Rate Limiting
-    await rateLimiter.registerGlobalRateLimit(this.fastify);
+    // Rate Limiting - cast para 'any' para resolver incompatibilidade de tipos
+    await rateLimiter.registerGlobalRateLimit(this.fastify as any);
 
     // Headers de segurança customizados
     this.fastify.addHook('onSend', corsConfig.addSecurityHeaders());
@@ -130,7 +150,7 @@ export class Application {
    * Configurar autenticação JWT
    */
   private async setupAuthentication(): Promise<void> {
-    await this.fastify.register(jwt, {
+    await this.fastify.register(jwt as any, {
       secret: environment.jwt.secret,
       sign: {
         expiresIn: environment.jwt.expiresIn,
@@ -144,13 +164,16 @@ export class Application {
     });
 
     // Decorar fastify com método de autenticação
-    this.fastify.decorate('authenticate', async function (request: any, reply: any) {
-      try {
-        await request.jwtVerify();
-      } catch (err) {
-        reply.send(err);
+    this.fastify.decorate(
+      'authenticate',
+      async function (request: FastifyRequest, reply: FastifyReply) {
+        try {
+          await request.jwtVerify();
+        } catch (err) {
+          reply.send(err);
+        }
       }
-    });
+    );
 
     logger.info('🔐 Autenticação JWT configurada');
   }
@@ -258,7 +281,6 @@ export class Application {
     // Registrar rotas de autenticação
     await this.fastify.register(authRoutes, { prefix: '/api' });
     await this.fastify.register(driverRoutes, { prefix: '/api' });
-    // await this.fastify.register(authRoutes, { prefix: '/api/auth' });
     await this.fastify.register(userRoutes, { prefix: '/api/users' });
 
     // Rota 404 personalizada
@@ -280,7 +302,7 @@ export class Application {
    */
   private async setupHooks(): Promise<void> {
     // Hook de request
-    this.fastify.addHook('onRequest', async (request, reply) => {
+    this.fastify.addHook('onRequest', async request => {
       const start = Date.now();
       request.startTime = start;
 
@@ -295,7 +317,7 @@ export class Application {
 
     // Hook de response
     this.fastify.addHook('onSend', async (request, reply, payload) => {
-      const duration = Date.now() - (request as any).startTime;
+      const duration = Date.now() - (request.startTime || 0);
 
       logger.info('📤 Response enviado', {
         requestId: request.id,
@@ -309,7 +331,7 @@ export class Application {
     });
 
     // Hook de erro
-    this.fastify.addHook('onError', async (request, reply, error) => {
+    this.fastify.addHook('onError', async (request, _reply, error) => {
       logger.error('🚨 Erro na requisição', {
         requestId: request.id,
         method: request.method,
@@ -338,7 +360,7 @@ export class Application {
   /**
    * Handler para rota raiz
    */
-  private async rootHandler(request: any, reply: any) {
+  private async rootHandler(_request: FastifyRequest, _reply: FastifyReply) {
     return {
       success: true,
       message: 'Telemetria Pioneira API',
@@ -359,7 +381,7 @@ export class Application {
   /**
    * Handler para verificação de saúde
    */
-  private async healthCheck(request: any, reply: any) {
+  private async healthCheck(_request: FastifyRequest, reply: FastifyReply) {
     try {
       const startTime = Date.now();
 
@@ -432,7 +454,7 @@ export class Application {
   /**
    * Handler para rotas não encontradas
    */
-  private async notFoundHandler(request: any, reply: any) {
+  private async notFoundHandler(request: FastifyRequest, reply: FastifyReply) {
     return reply.status(404).send({
       success: false,
       message: 'Rota não encontrada',
@@ -489,7 +511,7 @@ export class Application {
    * Obter instância do Fastify
    */
   public getFastify(): FastifyInstance {
-    return this.fastify;
+    return this.fastify as any;
   }
 
   /**

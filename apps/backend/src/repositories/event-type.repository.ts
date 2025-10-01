@@ -23,7 +23,7 @@ export class EventTypeRepository extends BaseRepository<EventType> {
    * Busca entidades por uma lista de IDs externos.
    * @param externalIds Array de IDs externos.
    */
-  async findByExternalIds(externalIds: number[]): Promise<any[]> {
+  async findByExternalIds(externalIds: bigint[]): Promise<EventType[]> {
     if (externalIds.length === 0) {
       return [];
     }
@@ -36,7 +36,8 @@ export class EventTypeRepository extends BaseRepository<EventType> {
   /**
    * Atualiza um tipo de evento com base em seu ID externo.
    */
-  async updateByExternalId(externalId: number, data: DeepPartial<EventType>): Promise<void> {
+  async updateByExternalId(externalId: bigint, data: DeepPartial<EventType>): Promise<void> {
+    // ALTERADO
     await this.repository.update({ external_id: externalId }, data);
   }
 

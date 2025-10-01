@@ -15,7 +15,7 @@ export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
     await this.repository.save(events, { chunk: 200 });
   }
 
-  async findExistingExternalIds(externalIds: string[]): Promise<string[]> {
+  async findExistingExternalIds(externalIds: bigint[]): Promise<bigint[]> {
     if (externalIds.length === 0) {
       return [];
     }
@@ -30,46 +30,34 @@ export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
     return existingEvents.map(event => event.external_id);
   }
 
-  // ✅ SIMPLES E DIRETO - SEM COMPLICAÇÃO
+  /**
+   * Busca eventos de um motorista que correspondam a certas classificações.
+   *
+   */
   public async findByDriverAndClassifications(
-    driverExternalId: string,
+    driverExternalId: bigint,
     classifications: string[]
   ): Promise<any[]> {
-    // 1. Buscar todos os eventos do motorista
-    const events = await this.repository.find({
-      where: {
-        driver_external_id: driverExternalId,
-      },
-      order: {
-        occurred_at: 'DESC',
-      },
-    });
-
-    if (events.length === 0) {
+    if (classifications.length === 0) {
       return [];
     }
 
-    // 2. Buscar os tipos de evento que são infrações
-    const eventTypeRepo = AppDataSource.getRepository(EventType);
-    const infractionTypes = await eventTypeRepo.find({
-      where: {
-        classification: In(classifications),
-      },
-    });
+    // Usamos o QueryBuilder para ter controle total sobre a consulta
+    const query = this.repository
+      .createQueryBuilder('event')
+      .leftJoin(EventType, 'eventType', 'eventType.external_id = event.event_type_external_id')
+      .select([
+        // Seleciona explicitamente os campos necessários para o serviço
+        'event.external_id AS "external_id"',
+        'event.event_timestamp AS "occurred_at"',
+        'event.speed AS "speed_kmh"',
+        'event.raw_data AS "raw_data"',
+        'eventType.description AS "eventType_description"',
+      ])
+      .where('event.driver_external_id = :driverExternalId', { driverExternalId })
+      .andWhere('eventType.classification IN (:...classifications)', { classifications })
+      .orderBy('event.event_timestamp', 'DESC');
 
-    // 3. Criar mapa de tipos de infração
-    const infractionTypeIds = new Set(infractionTypes.map(et => et.external_id.toString()));
-
-    // 4. Filtrar apenas eventos que são infrações e adicionar descrição
-    const infractionTypeMap = new Map(infractionTypes.map(et => [et.external_id.toString(), et]));
-
-    return events
-      .filter(event => infractionTypeIds.has(event.event_type_external_id))
-      .map(event => ({
-        ...event,
-        eventType_description:
-          infractionTypeMap.get(event.event_type_external_id)?.description ||
-          'Descrição indisponível',
-      }));
+    return query.getRawMany();
   }
 }

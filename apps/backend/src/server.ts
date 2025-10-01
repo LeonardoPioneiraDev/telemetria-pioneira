@@ -1,7 +1,10 @@
+BigInt.prototype.toJSON = function () {
+  return this.toString();
+};
 import { app } from './app.js';
-import { logger } from './shared/utils/logger.js';
 import { environment } from './config/environment.js';
 import { migrator } from './database/migrate.js';
+import { logger } from './shared/utils/logger.js';
 
 /**
  * Função principal para iniciar o servidor
@@ -23,7 +26,6 @@ async function startServer(): Promise<void> {
 
     // Log de informações úteis
     logStartupInfo();
-
   } catch (error) {
     logger.error('💥 Falha crítica ao iniciar servidor:', error);
     process.exit(1);
@@ -35,7 +37,7 @@ async function startServer(): Promise<void> {
  */
 async function stopServer(signal: string): Promise<void> {
   logger.info(`📡 Sinal ${signal} recebido. Parando servidor...`);
-  
+
   try {
     await app.stop();
     logger.info('✅ Servidor parado com sucesso');
@@ -51,22 +53,32 @@ async function stopServer(signal: string): Promise<void> {
  */
 function logStartupInfo(): void {
   const baseUrl = `http://${environment.HOST}:${environment.PORT}`;
-  
+
   logger.info('🎉 Servidor iniciado com sucesso!');
   logger.info('📋 Informações do servidor:');
   logger.info(`   🌐 URL Base: ${baseUrl}`);
-  logger.info(`   📚 Documentação: ${environment.swagger.enabled ? `${baseUrl}/docs` : 'Desabilitada'}`);
+  logger.info(
+    `   📚 Documentação: ${environment.swagger.enabled ? `${baseUrl}/docs` : 'Desabilitada'}`
+  );
   logger.info(`   💚 Health Check: ${baseUrl}/health`);
   logger.info(`   🔐 Auth Endpoints: ${baseUrl}/api/auth`);
-  logger.info(`   🗄️ Banco: ${environment.database.host}:${environment.database.port}/${environment.database.name}`);
+  logger.info(
+    `   🗄️ Banco: ${environment.database.host}:${environment.database.port}/${environment.database.name}`
+  );
   logger.info(`   📧 Email: ${environment.email.enabled ? 'Habilitado' : 'Desabilitado'}`);
-  logger.info(`   🛡️ Rate Limiting: ${environment.rateLimit.enabled ? 'Habilitado' : 'Desabilitado'}`);
-  logger.info(`   📊 Logs: ${environment.log.level} (${environment.log.toFile ? 'arquivo + ' : ''}console)`);
-  
+  logger.info(
+    `   🛡️ Rate Limiting: ${environment.rateLimit.enabled ? 'Habilitado' : 'Desabilitado'}`
+  );
+  logger.info(
+    `   📊 Logs: ${environment.log.level} (${environment.log.toFile ? 'arquivo + ' : ''}console)`
+  );
+
   if (environment.NODE_ENV === 'development') {
     logger.info('🔧 Modo Desenvolvimento:');
     logger.info(`   👑 Admin: ${environment.admin.email} / ${environment.admin.username}`);
-    logger.info(`   👥 Usuários exemplo: ${environment.dev.createSampleUsers ? 'Criados' : 'Não criados'}`);
+    logger.info(
+      `   👥 Usuários exemplo: ${environment.dev.createSampleUsers ? 'Criados' : 'Não criados'}`
+    );
   }
 }
 
@@ -79,7 +91,7 @@ function setupSignalHandlers(): void {
   process.on('SIGINT', () => stopServer('SIGINT'));
 
   // Tratamento de erros não capturados
-  process.on('uncaughtException', (error) => {
+  process.on('uncaughtException', error => {
     logger.error('🚨 Exceção não capturada:', error);
     process.exit(1);
   });
@@ -90,7 +102,7 @@ function setupSignalHandlers(): void {
   });
 
   // Log de informações do processo
-  process.on('exit', (code) => {
+  process.on('exit', code => {
     logger.info(`🏁 Processo finalizado com código: ${code}`);
   });
 }
@@ -104,7 +116,7 @@ function validateEnvironment(): void {
     'DATABASE_HOST',
     'DATABASE_USERNAME',
     'DATABASE_PASSWORD',
-    'DATABASE_NAME'
+    'DATABASE_NAME',
   ];
 
   const missingVars = requiredVars.filter(varName => !process.env[varName]);
@@ -131,7 +143,6 @@ async function main(): Promise<void> {
 
     // Iniciar servidor
     await startServer();
-
   } catch (error) {
     logger.error('💥 Erro fatal na inicialização:', error);
     process.exit(1);
@@ -140,7 +151,7 @@ async function main(): Promise<void> {
 
 // Executar apenas se for o arquivo principal
 if (import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((error) => {
+  main().catch(error => {
     console.error('💥 Erro fatal:', error);
     process.exit(1);
   });

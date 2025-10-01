@@ -20,22 +20,29 @@ export class InfractionService {
       throw new Error('Motorista não encontrado');
     }
 
-    const infractionClassifications = ['Infração de Condução'];
+    // As classificações de infração que buscamos
+    const infractionClassifications = ['Infração de Condução']; // Exemplo
 
+    // O repositório agora retorna um array de objetos simples com os dados já "joinados"
     const infractions = await this.telemetryEventRepository.findByDriverAndClassifications(
-      String(driver.external_id),
+      driver.external_id, // Usamos o external_id do motorista
       infractionClassifications
     );
 
-    // ✅ MAPEAMENTO DIRETO E LIMPO
+    // O mapeamento agora é direto, pois os dados já vêm no formato que precisamos
     return infractions.map(event => ({
       id: Number(event.external_id) || 0,
       description: event.eventType_description || 'Descrição indisponível',
-      occurredAt: event.occurred_at.toISOString(),
+      occurredAt: new Date(event.occurred_at).toISOString(), // Garantir que é um objeto Date
       speed: event.speed_kmh ? Number(event.speed_kmh) : null,
-      speedLimit: event.speed_limit_kmh ? Number(event.speed_limit_kmh) : null,
+
+      // A lógica para speed_limit_kmh e value precisa ser adaptada se vierem do raw_data
+      speedLimit: event.raw_data?.SpeedLimitKilometresPerHour
+        ? Number(event.raw_data.SpeedLimitKilometresPerHour)
+        : null,
+      value: event.raw_data?.Value ? Number(event.raw_data.Value) : null,
+
       location: this.extractLocation(event.raw_data) || 'Localização não disponível',
-      value: event.value ? Number(event.value) : null,
     }));
   }
 

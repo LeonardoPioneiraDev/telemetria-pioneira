@@ -1,10 +1,8 @@
 //apps/backend/src/entities/event-type.entity.ts
-import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import {
   Column,
   CreateDateColumn,
   Entity,
-  OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
@@ -15,7 +13,7 @@ export class EventType {
   id!: number;
 
   @Column({ type: 'bigint', unique: true, comment: 'ID do tipo de evento na API da MiX' })
-  external_id!: number;
+  external_id!: bigint;
 
   @Column({ type: 'varchar', length: 255 })
   description!: string;
@@ -40,7 +38,4 @@ export class EventType {
 
   @UpdateDateColumn()
   updated_at!: Date;
-
-  @OneToMany(() => TelemetryEvent, event => event.eventType)
-  events!: TelemetryEvent[];
 }
