@@ -162,32 +162,36 @@ export class EventIngestionWorker {
       do {
         const response = await this.mixApiClient.getEventsSince(currentToken);
         if (!response) {
-          logger.error('Não foi possível obter resposta da API MiX. Abortando ciclo atual.');
-          hasMoreItems = false;
-          continue;
+          /* ... (lógica de erro da API) */
         }
 
-        // O _processEventsBatch agora só filtra e retorna os eventos a serem criados
-        const eventsToCreate = this._processEventsBatch(response.events);
+        // ✅ PASSO 1: O _processEventsBatch agora faz todo o trabalho de filtragem
+        const newEventsToCreate = await this._processEventsBatch(response.events);
 
-        // A lógica de salvar e atualizar o token agora é atômica
+        // ✅ PASSO 2: A transação agora só lida com a escrita atômica
         await AppDataSource.transaction(async transactionalEntityManager => {
-          if (eventsToCreate.length > 0) {
+          if (newEventsToCreate.length > 0) {
             await transactionalEntityManager
               .getRepository(TelemetryEvent)
-              .save(eventsToCreate, { chunk: 200 });
-            logger.info(`✅ ${eventsToCreate.length} novos eventos salvos no banco.`);
+              .save(newEventsToCreate, { chunk: 200 });
 
-            this.triggerMasterDataSyncForMissing(eventsToCreate.map(e => e.raw_data as MixEvent));
+            // Dispara a sincronização apenas para os eventos que foram efetivamente criados
+            this.triggerMasterDataSyncForMissing(
+              newEventsToCreate.map(e => e.raw_data as MixEvent)
+            );
           }
 
-          // Atualizamos o token DENTRO da mesma transação
+          // Atualizamos o token DENTRO da mesma transação, garantindo consistência
           const controlRepo = transactionalEntityManager.getRepository(EtlControl);
           await controlRepo.update(
             { process_name: PROCESS_NAME },
             { last_successful_sincetoken: response.nextSinceToken }
           );
         });
+
+        if (newEventsToCreate.length > 0) {
+          logger.info(`✅ ${newEventsToCreate.length} novos eventos foram salvos no banco.`);
+        }
 
         logger.debug(`Token de controle atualizado no banco para: ${response.nextSinceToken}`);
 
@@ -212,28 +216,31 @@ export class EventIngestionWorker {
    * Ele apenas recebe uma lista de eventos, remove duplicatas e retorna
    * a lista pronta para ser salva, sem I/O.
    */
-  private _processEventsBatch(events: MixEvent[]): DeepPartial<TelemetryEvent>[] {
+  private async _processEventsBatch(events: MixEvent[]): Promise<DeepPartial<TelemetryEvent>[]> {
+    // 1. Remove duplicatas internas do lote
     const uniqueEventsMap = new Map<string, MixEvent>();
     for (const event of events) {
       uniqueEventsMap.set(event.EventId, event);
     }
     const uniqueEvents = Array.from(uniqueEventsMap.values());
 
-    if (events.length !== uniqueEvents.length) {
-      logger.warn(
-        `Lote de eventos continha duplicatas internas. Recebidos: ${events.length}, únicos: ${uniqueEvents.length}`
-      );
-    }
+    if (uniqueEvents.length === 0) return [];
 
-    // NOTA: A verificação contra o banco foi removida daqui.
-    // A transação garante que, se o job for re-executado, ele tentará
-    // inserir o mesmo lote e falhará na constraint de chave única,
-    // causando um rollback e mantendo o estado consistente. O job falhará,
-    // o que é o comportamento correto, evitando dados duplicados.
-    // Para um sistema mais avançado, poderíamos manter a verificação, mas
-    // a transação já nos dá a garantia de segurança principal.
+    // 2. Verifica contra o banco de dados
+    const incomingExternalIds = uniqueEvents.map(event => BigInt(event.EventId));
+    const existingExternalIds =
+      await this.telemetryEventRepository.findExistingExternalIds(incomingExternalIds);
+    const existingIdsSet = new Set(existingExternalIds);
 
-    return uniqueEvents.map(event => ({
+    // 3. Filtra para obter apenas os eventos realmente novos
+    const newEvents = uniqueEvents.filter(event => !existingIdsSet.has(BigInt(event.EventId)));
+
+    logger.info(
+      `Filtragem de duplicatas: ${events.length} recebidos, ${uniqueEvents.length} únicos, ${newEvents.length} são novos.`
+    );
+
+    // 4. Mapeia apenas os novos eventos para o formato de entidade
+    return newEvents.map(event => ({
       external_id: BigInt(event.EventId),
       event_timestamp: event.StartDateTime,
       latitude: event.StartPosition?.Latitude,

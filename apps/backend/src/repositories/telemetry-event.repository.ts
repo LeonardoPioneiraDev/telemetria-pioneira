@@ -2,7 +2,7 @@
 import { AppDataSource } from '@/data-source.js';
 import { EventType } from '@/entities/event-type.entity.js';
 import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
-import { DeepPartial, In } from 'typeorm';
+import { DeepPartial } from 'typeorm';
 import { BaseRepository } from './base.repository.js';
 
 export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
@@ -15,21 +15,37 @@ export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
     await this.repository.save(events, { chunk: 200 });
   }
 
+  // async findExistingExternalIds(externalIds: bigint[]): Promise<bigint[]> {
+  //   if (externalIds.length === 0) {
+  //     return [];
+  //   }
+
+  //   const existingEvents = await this.repository.find({
+  //     where: {
+  //       external_id: In(externalIds),
+  //     },
+  //     select: ['external_id'],
+  //   });
+
+  //   return existingEvents.map(event => event.external_id);
+  // }
   async findExistingExternalIds(externalIds: bigint[]): Promise<bigint[]> {
     if (externalIds.length === 0) {
       return [];
     }
 
-    const existingEvents = await this.repository.find({
-      where: {
-        external_id: In(externalIds),
-      },
-      select: ['external_id'],
-    });
+    // ALTERAÇÃO: Trocamos o `repository.find` pelo `QueryBuilder`
+    // para garantir a correta serialização do array de BigInts na cláusula IN.
+    const results = await this.repository
+      .createQueryBuilder('event')
+      .select('event.external_id', 'external_id')
+      .where('event.external_id IN (:...externalIds)', { externalIds })
+      .getRawMany();
 
-    return existingEvents.map(event => event.external_id);
+    // O getRawMany retorna objetos com a propriedade como string,
+    // então convertemos de volta para BigInt para manter a consistência do tipo.
+    return results.map(row => BigInt(row.external_id));
   }
-
   /**
    * Busca eventos de um motorista que correspondam a certas classificações.
    *
