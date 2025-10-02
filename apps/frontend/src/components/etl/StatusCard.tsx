@@ -48,6 +48,28 @@ const statusConfig = {
   },
 };
 
+// ✅ CORREÇÃO: Função melhorada de formatação de tempo
+function formatLastSync(ageInMinutes: number | null | undefined): string {
+  if (ageInMinutes === null || ageInMinutes === undefined) return 'N/A';
+
+  // Garantir que não é negativo
+  const minutes = Math.max(0, ageInMinutes);
+
+  if (minutes === 0) return 'Agora mesmo';
+  if (minutes < 1) return 'Menos de 1min';
+  if (minutes < 60) return `${minutes}min atrás`;
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours < 24) {
+    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min atrás` : `${hours}h atrás`;
+  }
+
+  const days = Math.floor(hours / 24);
+  return `${days}d atrás`;
+}
+
 export function StatusCard({ status, lastSyncAge }: StatusCardProps) {
   const config = statusConfig[status];
   const Icon = config.icon;
@@ -63,12 +85,9 @@ export function StatusCard({ status, lastSyncAge }: StatusCardProps) {
       <CardContent>
         <div className="space-y-2">
           <Badge variant={config.badgeVariant}>{config.label}</Badge>
-          {lastSyncAge !== null && lastSyncAge !== undefined && (
-            <p className="text-xs text-muted-foreground">
-              Última sync:{' '}
-              {lastSyncAge < 60 ? `${lastSyncAge}min` : `${Math.floor(lastSyncAge / 60)}h`}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground">
+            Última sync: {formatLastSync(lastSyncAge)}
+          </p>
         </div>
       </CardContent>
     </Card>
