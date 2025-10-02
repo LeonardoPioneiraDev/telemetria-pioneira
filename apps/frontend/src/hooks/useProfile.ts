@@ -61,7 +61,6 @@ export const useProfile = () => {
     gcTime: 10 * 60 * 1000, // 10 minutos
     retry: 2,
     refetchOnWindowFocus: false,
-    // Usar dados do AuthContext como dados iniciais para evitar loading desnecessário
     initialData: user
       ? {
           id: user.id,
