@@ -18,7 +18,7 @@ import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
 import { userRoutes } from './modules/users/routes/userRoutes.js';
-import { register } from 'module';
+import { historicalLoadRoutes } from './modules/etl/routes/historical-load.routes.js';
 
 // Extender o tipo FastifyRequest para incluir startTime
 declare module 'fastify' {
@@ -286,6 +286,7 @@ export class Application {
     await this.fastify.register(userRoutes, { prefix: '/api/users' });
 
     await this.fastify.register(etlMonitoringRoutes, { prefix: '/api' });
+    await this.fastify.register(historicalLoadRoutes, { prefix: '/api' });
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
 

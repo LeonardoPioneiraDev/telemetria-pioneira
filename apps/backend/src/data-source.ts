@@ -8,6 +8,7 @@ import { ApiCredential } from './entities/api-credential.entity.js';
 import { Driver } from './entities/driver.entity.js';
 import { EtlControl } from './entities/etl-control.entity.js';
 import { EventType } from './entities/event-type.entity.js';
+import { HistoricalLoadControl } from './entities/historical-load-control.entity.js';
 import { TelemetryEvent } from './entities/telemetry-event.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
 
@@ -21,7 +22,15 @@ export const AppDataSource = new DataSource({
   database: environment.database.name,
   synchronize: environment.database.synchronize,
   logging: environment.database.logging,
-  entities: [Driver, Vehicle, EventType, TelemetryEvent, ApiCredential, EtlControl],
+  entities: [
+    Driver,
+    Vehicle,
+    EventType,
+    TelemetryEvent,
+    ApiCredential,
+    EtlControl,
+    HistoricalLoadControl,
+  ],
   migrations: ['src/migrations/**/*.ts'],
 });
 
