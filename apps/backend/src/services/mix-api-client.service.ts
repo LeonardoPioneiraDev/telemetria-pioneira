@@ -28,6 +28,30 @@ type MixEventType = {
   DisplayUnits: string | null;
 };
 
+export interface EventsSinceResponse {
+  events: MixEvent[];
+  hasMoreItems: boolean;
+  nextSinceToken: string;
+}
+
+// Adicione esta interface também (se ainda não existir)
+export interface MixEvent {
+  EventId: string;
+  DriverId?: string;
+  AssetId?: string;
+  EventTypeId?: string;
+  StartDateTime: Date;
+  StartPosition?: {
+    Latitude: number;
+    Longitude: number;
+    SpeedKilometresPerHour?: number;
+    FormattedAddress?: string;
+  };
+  Value?: number;
+  SpeedLimitKilometresPerHour?: number;
+  [key: string]: any;
+}
+
 export class MixApiClient {
   private api: AxiosInstance;
   private identityApi: AxiosInstance;
@@ -145,15 +169,42 @@ export class MixApiClient {
     }
   }
   public async getEventsSince(sinceToken: string): Promise<EventsSinceResponse | null> {
+    const startTime = Date.now();
+
     try {
       const token = await this._getAccessToken();
       if (!token) throw new Error('Não foi possível obter o token de acesso para buscar eventos.');
 
       const url = `/events/groups/createdsince/organisation/1662701282895036416/sincetoken/${sinceToken}/quantity/1000`;
 
-      const response = await this.api.get(url, {
-        headers: { Authorization: `Bearer ${token}` },
+      // Usa o método retryable para chamadas com retry automático
+      const response = await this._retryableRequest(
+        () =>
+          this.api.get(url, {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: environment.api.timeout,
+          }),
+        'getEventsSince'
+      );
+
+      const duration = Date.now() - startTime;
+      const eventsCount = Array.isArray(response.data) ? response.data.length : 0;
+
+      logger.info(`✅ Eventos buscados com sucesso`, {
+        sinceToken,
+        eventsCount,
+        duration: `${duration}ms`,
+        hasMoreItems: response.headers['hasmoreitems'],
+        nextToken: response.headers['getsincetoken']?.substring(0, 20) + '...',
       });
+
+      // Log de warning se a requisição demorar muito
+      if (duration > 10000) {
+        logger.warn(`⚠️ Requisição lenta detectada (${duration}ms)`, {
+          sinceToken,
+          url,
+        });
+      }
 
       return {
         events: response.data,
@@ -161,15 +212,102 @@ export class MixApiClient {
         nextSinceToken: response.headers['getsincetoken'],
       };
     } catch (error) {
-      logger.error(
-        `Erro ao buscar eventos com sinceToken ${sinceToken}:`,
-        this._formatAxiosError(error)
-      );
+      const duration = Date.now() - startTime;
+      logger.error(`Erro ao buscar eventos com sinceToken ${sinceToken}:`, {
+        error: this._formatAxiosError(error),
+        duration: `${duration}ms`,
+      });
       return null;
     }
   }
 
   // --- MÉTODOS PRIVADOS ---
+
+  /**
+   * Executa uma requisição com retry automático e tratamento de erros específicos
+   */
+  private async _retryableRequest<T = any>(
+    requestFn: () => Promise<T>,
+    operationName: string
+  ): Promise<T> {
+    let lastError: any;
+
+    for (let attempt = 1; attempt <= environment.api.retryAttempts; attempt++) {
+      try {
+        const result = await requestFn();
+
+        // Sucesso - reseta o contador de erros do interceptor se necessário
+        if (attempt > 1) {
+          logger.info(`✅ ${operationName}: sucesso na tentativa ${attempt}`);
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+
+        // Verifica se é um erro que não devemos fazer retry
+        if (isAxiosError(error)) {
+          const status = error.response?.status;
+
+          // Erros 4xx (exceto 429) não devem fazer retry
+          if (status && status >= 400 && status < 500 && status !== 429) {
+            logger.error(`❌ ${operationName}: erro ${status} (sem retry)`, {
+              status,
+              statusText: error.response?.statusText,
+              attempt,
+            });
+            throw error;
+          }
+
+          // 429 (Rate Limit) - aguarda mais tempo
+          if (status === 429) {
+            const retryAfter = error.response?.headers['retry-after'];
+            const waitTime = retryAfter ? parseInt(retryAfter) * 1000 : 60000;
+
+            logger.warn(`⚠️ Rate limit atingido (429). Aguardando ${waitTime}ms...`, {
+              operationName,
+              attempt,
+            });
+
+            await this._sleep(waitTime);
+            continue;
+          }
+        }
+
+        // Se não for a última tentativa, aguarda com backoff exponencial
+        if (attempt < environment.api.retryAttempts) {
+          const delay = environment.api.retryDelay * Math.pow(2, attempt - 1);
+          const maxDelay = 30000;
+          const finalDelay = Math.min(delay, maxDelay);
+
+          logger.warn(
+            `⚠️ ${operationName}: falhou na tentativa ${attempt}. Retry em ${finalDelay}ms...`,
+            {
+              error: error instanceof Error ? error.message : String(error),
+              nextAttempt: attempt + 1,
+            }
+          );
+
+          await this._sleep(finalDelay);
+        } else {
+          // Última tentativa falhou
+          logger.error(`❌ ${operationName}: falhou após ${attempt} tentativas`, {
+            error: this._formatAxiosError(error),
+          });
+        }
+      }
+    }
+
+    // Se chegou aqui, todas as tentativas falharam
+    throw lastError;
+  }
+
+  /**
+   * Helper para sleep
+   */
+  private _sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 
   private async _getAccessToken(): Promise<string | null> {
     try {
