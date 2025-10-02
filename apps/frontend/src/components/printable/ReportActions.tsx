@@ -3,19 +3,23 @@
 import { LOGO_BASE64 } from '@/assets/images/logoBase64';
 import { Button } from '@/components/ui/button';
 import { DriverInfo, PerformanceSummary, ReportDetails } from '@/types/api';
-import { Download, FileText, Printer } from 'lucide-react';
+import { FileText, Printer } from 'lucide-react';
 import { useState } from 'react';
 
 interface ReportActionsProps {
   driverInfo: DriverInfo;
   reportDetails: ReportDetails;
   performanceSummary: PerformanceSummary;
+  refetch: () => void;
+  isFetching: boolean;
 }
 
 export const ReportActions = ({
   driverInfo,
   reportDetails,
   performanceSummary,
+  refetch,
+  isFetching,
 }: ReportActionsProps) => {
   const [isGenerating, setIsGenerating] = useState(false);
 
@@ -81,7 +85,7 @@ export const ReportActions = ({
     }
 
     const width = 900;
-    const margin = { top: 50, right: 150, left: 90, bottom: 40 };
+    const margin = { top: 50, right: 150, left: 120, bottom: 40 };
     const chartWidth = 500;
 
     // Calcular altura baseada no número real de barras
@@ -751,7 +755,7 @@ export const ReportActions = ({
           Imprimir
         </Button>
 
-        <Button
+        {/* <Button
           onClick={handleDownloadPDF}
           variant="outline"
           size="sm"
@@ -760,6 +764,11 @@ export const ReportActions = ({
         >
           <Download className="mr-2 h-4 w-4" />
           {isGenerating ? 'Gerando...' : 'Baixar PDF'}
+        </Button> */}
+
+        {/* 2. Crie o botão que chama a função 'refetch' */}
+        <Button onClick={() => refetch()} disabled={isFetching}>
+          {isFetching ? 'Atualizando...' : 'Atualizar Relatório'}
         </Button>
       </div>
     </div>

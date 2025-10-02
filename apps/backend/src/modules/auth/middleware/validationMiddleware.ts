@@ -68,11 +68,10 @@ export class ValidationMiddleware {
 
         // Validar headers
         if (options.headers && request.headers) {
-          const { error, value } = options.headers.validate(request.headers, validationOptions);
+          const { error } = options.headers.validate(request.headers, validationOptions);
           if (error) {
             return this.handleValidationError(error, reply, 'headers');
           }
-          // Não sobrescrever headers, apenas validar
         }
 
         logger.debug('Validação bem-sucedida', {
