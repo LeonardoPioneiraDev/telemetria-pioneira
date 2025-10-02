@@ -4,6 +4,7 @@ import { ApiCredentialRepository } from '@/repositories/api-credential.repositor
 import { logger } from '@/shared/utils/logger.js';
 import axios, { AxiosInstance, isAxiosError } from 'axios';
 import JSONbig from 'json-bigint';
+import qs from 'qs';
 
 // Tipos de dados
 type MixDriver = {
@@ -59,6 +60,9 @@ export class MixApiClient {
 
   private isRefreshingToken = false;
   private onTokenRefreshed: ((token: string) => void)[] = [];
+
+  private cachedToken: string | null = null;
+  private tokenCacheExpiry: number = 0;
 
   constructor() {
     this.apiCredentialRepository = new ApiCredentialRepository();
@@ -221,6 +225,100 @@ export class MixApiClient {
     }
   }
 
+  /**
+   * Busca eventos históricos por intervalo de tempo
+   * @param fromDate Data inicial no formato yyyyMMddhhmmss
+   * @param toDate Data final no formato yyyyMMddhhmmss
+   */
+  public async getHistoricalEvents(fromDate: string, toDate: string): Promise<MixEvent[] | null> {
+    const startTime = Date.now();
+    let retries = 0;
+    const maxRetries = 2;
+
+    while (retries <= maxRetries) {
+      try {
+        const token = await this._getAccessToken();
+        if (!token) {
+          throw new Error('Não foi possível obter o token de acesso.');
+        }
+
+        const url = `/events/groups/entitytype/Asset/from/${fromDate}/to/${toDate}`;
+
+        // const response = await this.api.post(
+        //   url,
+        //   {
+        //     EntityIds: [1662701282895036400],
+        //   },
+        //   {
+        //     headers: {
+        //       Authorization: `Bearer ${token}`,
+        //       'Content-Type': 'application/json',
+        //     },
+        //     timeout: environment.api.timeout,
+        //   }
+        // );
+        const body = {
+          EntityIds: [1662701282895036400], // <-- Usando o ID que funciona no Postman
+        };
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json', // Boa prática
+          },
+          timeout: environment.api.timeout,
+        };
+
+        // --- ETAPA 2: ADICIONAR O LOG ANTES DA CHAMADA ---
+        logger.debug('AXIOS REQUEST CONFIG:', {
+          url,
+          method: 'post',
+          data: body,
+          headers: config.headers,
+        });
+
+        // --- ETAPA 3: FAZER A CHAMADA USANDO AS VARIÁVEIS ---
+        const response = await this.api.post(url, body, config);
+
+        const duration = Date.now() - startTime;
+        const eventsCount = Array.isArray(response.data) ? response.data.length : 0;
+
+        logger.info(`✅ Eventos históricos buscados com sucesso`, {
+          fromDate,
+          toDate,
+          eventsCount,
+          duration: `${duration}ms`,
+        });
+
+        return response.data;
+      } catch (error) {
+        if (isAxiosError(error) && error.response?.status === 401 && retries < maxRetries) {
+          logger.warn(
+            `⚠️ 401 recebido, tentativa ${retries + 1}/${maxRetries}. Limpando cache de token...`
+          );
+
+          this.cachedToken = null;
+          this.tokenCacheExpiry = 0;
+
+          retries++;
+          await this._sleep(2000); // Aguarda 2s antes de retry
+          continue;
+        }
+
+        // Outros erros
+        const duration = Date.now() - startTime;
+        logger.error(`Erro ao buscar eventos históricos (${fromDate} → ${toDate}):`, {
+          error: this._formatAxiosError(error),
+          duration: `${duration}ms`,
+        });
+        return null;
+      }
+    }
+
+    return null;
+  }
+
   // --- MÉTODOS PRIVADOS ---
 
   /**
@@ -311,17 +409,32 @@ export class MixApiClient {
 
   private async _getAccessToken(): Promise<string | null> {
     try {
+      const now = Date.now();
+      if (this.cachedToken && now < this.tokenCacheExpiry) {
+        return this.cachedToken;
+      }
+
       let credentials = await this.apiCredentialRepository.findFirst();
       if (!credentials) {
         credentials = await this._performLogin();
       }
       if (!credentials) return null;
 
-      const now = new Date();
       const expiresAt = new Date(credentials.expires_at);
-      if (expiresAt.getTime() - now.getTime() < 5 * 60 * 1000) {
-        return this._refreshToken();
+      const timeToExpiry = expiresAt.getTime() - now;
+
+      // Se faltam menos de 5 minutos, renova
+      if (timeToExpiry < 5 * 60 * 1000) {
+        const newToken = await this._refreshToken();
+        if (newToken) {
+          this.cachedToken = newToken;
+          this.tokenCacheExpiry = now + 4 * 60 * 1000;
+        }
+        return newToken;
       }
+
+      this.cachedToken = credentials.access_token;
+      this.tokenCacheExpiry = expiresAt.getTime() - 60 * 1000; // 1 min antes de expirar
 
       return credentials.access_token;
     } catch (error) {
@@ -333,21 +446,71 @@ export class MixApiClient {
     }
   }
 
+  // private async _refreshToken(): Promise<string | null> {
+  //   logger.info('🔄 Renovando access token...');
+  //   try {
+  //     const credentials = await this.apiCredentialRepository.findFirst();
+  //     if (!credentials?.refresh_token) {
+  //       logger.warn('Refresh token não encontrado. Realizando login completo.');
+  //       const newCredentials = await this._performLogin();
+  //       return newCredentials?.access_token || null;
+  //     }
+
+  //     const params = new URLSearchParams();
+  //     params.append('grant_type', 'refresh_token');
+  //     params.append('refresh_token', credentials.refresh_token);
+
+  //     const response = await this.identityApi.post('/token', params, {
+  //       headers: {
+  //         'Content-Type': 'application/x-www-form-urlencoded',
+  //         Authorization: `Basic ${environment.mixApi.basicAuthToken}`,
+  //       },
+  //     });
+
+  //     const { access_token, refresh_token, expires_in } = response.data;
+  //     const expires_at = new Date(new Date().getTime() + expires_in * 1000);
+
+  //     await this.apiCredentialRepository.upsertCredentials({
+  //       id: credentials.id,
+  //       access_token,
+  //       refresh_token,
+  //       expires_at,
+  //     });
+  //     logger.info('✅ Access token renovado com sucesso.');
+
+  //     return access_token;
+  //   } catch (error) {
+  //     logger.error('❌ FALHA AO RENOVAR TOKEN:', this._formatAxiosError(error));
+  //     // Se a renovação falhar, tenta um login completo como último recurso
+  //     const newCredentials = await this._performLogin();
+  //     return newCredentials?.access_token || null;
+  //   }
+  // }
+
   private async _refreshToken(): Promise<string | null> {
     logger.info('🔄 Renovando access token...');
     try {
       const credentials = await this.apiCredentialRepository.findFirst();
       if (!credentials?.refresh_token) {
         logger.warn('Refresh token não encontrado. Realizando login completo.');
-        const newCredentials = await this._performLogin();
-        return newCredentials?.access_token || null;
+        return this._performLogin().then(newCreds => newCreds?.access_token || null);
       }
 
-      const params = new URLSearchParams();
-      params.append('grant_type', 'refresh_token');
-      params.append('refresh_token', credentials.refresh_token);
+      // 1. Define os dados da renovação
+      const refreshData = {
+        grant_type: 'refresh_token',
+        refresh_token: credentials.refresh_token,
+      };
 
-      const response = await this.identityApi.post('/token', params, {
+      // 2. Usa a biblioteca 'qs' para formatar, replicando o Postman
+      const requestBody = qs.stringify(refreshData);
+      const queryString = qs.stringify(refreshData);
+
+      // 3. Monta a URL com a query string
+      const urlComParametros = `/token?${queryString}`;
+
+      // 4. Envia a requisição com os dados na URL e no Body
+      const response = await this.identityApi.post(urlComParametros, requestBody, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Authorization: `Basic ${environment.mixApi.basicAuthToken}`,
@@ -377,13 +540,23 @@ export class MixApiClient {
   private async _performLogin(): Promise<ApiCredential | null> {
     logger.info('🔑 Realizando login inicial na API MiX...');
     try {
-      const params = new URLSearchParams();
-      params.append('grant_type', 'password');
-      params.append('username', environment.mixApi.username);
-      params.append('password', environment.mixApi.password);
-      params.append('scope', environment.mixApi.scope);
+      // 1.  dados do login em um objeto simples
+      const loginData = {
+        grant_type: 'password',
+        username: environment.mixApi.username,
+        password: environment.mixApi.password,
+        scope: environment.mixApi.scope,
+      };
 
-      const response = await this.identityApi.post('/token', params, {
+      // 2. biblioteca 'qs' para formatar os dados, exatamente como o Postman
+      const requestBody = qs.stringify(loginData);
+      const queryString = qs.stringify(loginData);
+
+      // 3.  URL com a query string
+      const urlComParametros = `/token?${queryString}`;
+
+      // 4. Envia a requisição com os dados na URL e no Body
+      const response = await this.identityApi.post(urlComParametros, requestBody, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
           Authorization: `Basic ${environment.mixApi.basicAuthToken}`,
