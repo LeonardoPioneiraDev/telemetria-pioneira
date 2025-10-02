@@ -16,7 +16,9 @@ import swaggerUi from '@fastify/swagger-ui';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
+import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
 import { userRoutes } from './modules/users/routes/userRoutes.js';
+import { register } from 'module';
 
 // Extender o tipo FastifyRequest para incluir startTime
 declare module 'fastify' {
@@ -283,6 +285,7 @@ export class Application {
     await this.fastify.register(driverRoutes, { prefix: '/api' });
     await this.fastify.register(userRoutes, { prefix: '/api/users' });
 
+    await this.fastify.register(etlMonitoringRoutes, { prefix: '/api' });
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
 
