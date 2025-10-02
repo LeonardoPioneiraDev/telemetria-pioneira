@@ -98,12 +98,13 @@ export class EtlMonitoringService {
         this._getPerformanceStats(),
       ]);
 
-      // Determina o status geral
-      let status: ETLStatus['status'] = 'unknown';
+      let status: ETLStatus['status'] = 'idle';
 
       if (workersInfo.eventIngestion.active > 0) {
         status = 'running';
-      } else if (workersInfo.eventIngestion.failed > 0) {
+      } else if (lastSync && lastSync.ageInMinutes > 120) {
+        status = 'error'; // Pode estar travado
+      } else if (workersInfo.eventIngestion.failed > 5) {
         status = 'error';
       } else {
         status = 'idle';
@@ -230,13 +231,20 @@ export class EtlMonitoringService {
           duration: job.finishedOn && job.processedOn ? job.finishedOn - job.processedOn : null,
           returnValue: job.returnvalue,
         })),
-        ...failed.map(job => ({
-          id: job.id,
-          status: 'failed',
-          processedOn: job.processedOn,
-          finishedOn: job.finishedOn,
-          failedReason: job.failedReason,
-        })),
+        // ✅ FILTRAR jobs que falharam por "stalled" (esses são normais e foram recuperados)
+        ...failed
+          .filter(job => {
+            // Ignora jobs que falharam apenas por "stalled" - eles foram recuperados
+            const isStalled = job.failedReason?.includes('stalled');
+            return !isStalled;
+          })
+          .map(job => ({
+            id: job.id,
+            status: 'failed',
+            processedOn: job.processedOn,
+            finishedOn: job.finishedOn,
+            failedReason: job.failedReason,
+          })),
       ].sort((a, b) => (b.finishedOn || 0) - (a.finishedOn || 0));
 
       return history.slice(0, limit);
@@ -256,9 +264,12 @@ export class EtlMonitoringService {
 
     if (!control) return null;
 
-    const ageInMinutes = Math.floor(
-      (Date.now() - control.last_run_timestamp.getTime()) / 1000 / 60
-    );
+    const now = new Date();
+    const lastRun = new Date(control.last_run_timestamp);
+
+    // Garantir que a diferença não seja negativa
+    const diffMs = Math.max(0, now.getTime() - lastRun.getTime());
+    const ageInMinutes = Math.floor(diffMs / 1000 / 60);
 
     return {
       token: control.last_successful_sincetoken,
