@@ -258,7 +258,7 @@ export class MixApiClient {
         //   }
         // );
         const body = {
-          EntityIds: [1662701282895036400], // <-- Usando o ID que funciona no Postman
+          EntityIds: ['1662701282895036416'],
         };
 
         const config = {

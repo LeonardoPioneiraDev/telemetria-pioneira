@@ -1,4 +1,7 @@
-import { FastifyRequest } from 'fastify';
+// @types/fastify.d.ts
+import 'fastify';
+import type { UserPermission, UserRole } from '../src/shared/constants/index.js';
+import { FastifyReply } from 'fastify';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -6,8 +9,8 @@ declare module 'fastify' {
       id: string;
       email: string;
       username: string;
-      role: string;
-      permissions: string[];
+      role: UserRole;
+      permissions: UserPermission[];
     };
   }
 
