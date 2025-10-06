@@ -1,6 +1,6 @@
 //apps/backend/src/modules/auth/controllers/authController.ts
 import { FastifyReply, FastifyRequest } from 'fastify';
-import type { UserRole } from '../../../shared/constants/index.js';
+import type { UserRole, UserStatus } from '../../../shared/constants/index.js';
 import { USER_ROLES } from '../../../shared/constants/index.js';
 import { authLogger, logger } from '../../../shared/utils/logger.js';
 import { userModel } from '../models/User.js';
@@ -52,7 +52,7 @@ export interface CreateUserBody {
   fullName: string;
   password: string;
   role?: UserRole;
-  status?: string;
+  status?: UserStatus;
   sendWelcomeEmail?: boolean;
 }
 
@@ -62,7 +62,7 @@ export interface UpdateUserBody {
   fullName?: string;
   password?: string;
   role?: UserRole;
-  status?: string;
+  status?: UserStatus;
 }
 
 export interface ListUsersQuery {
@@ -70,7 +70,7 @@ export interface ListUsersQuery {
   limit?: number;
   search?: string;
   role?: UserRole;
-  status?: string;
+  status?: UserStatus;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
 }
@@ -144,17 +144,22 @@ export class AuthController {
   /**
    * Fazer login
    */
-  public async login(
-    request: FastifyRequest<{ Body: LoginBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { email, password, rememberMe } = request.body;
+      const { email, password, rememberMe } = request.body as LoginBody;
+
       const ipAddress = request.ip;
 
       authLogger.info('Tentativa de login', { email, ip: ipAddress });
 
-      const result = await authService.login({ email, password, rememberMe }, ipAddress);
+      const result = await authService.login(
+        {
+          email,
+          password,
+          rememberMe: rememberMe ?? false,
+        },
+        ipAddress
+      );
 
       return reply.status(200).send({
         success: true,
@@ -364,7 +369,7 @@ export class AuthController {
   ): Promise<void> {
     try {
       const { currentPassword, newPassword } = request.body;
-      const userId = request.user!.id;
+      const userId = (request.user as { id: string }).id;
 
       authLogger.info('Tentativa de alteração de senha', { userId });
 
@@ -419,7 +424,7 @@ export class AuthController {
    */
   public async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const userId = request.user!.id;
+      const userId = (request.user as { id: string }).id;
 
       authLogger.info('Tentativa de logout', { userId });
 
@@ -443,7 +448,7 @@ export class AuthController {
    */
   public async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const userId = request.user!.id;
+      const userId = (request.user as { id: string }).id;
       const profile = await authService.getProfile(userId);
 
       return reply.status(200).send({
@@ -477,7 +482,7 @@ export class AuthController {
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const userId = request.user!.id;
+      const userId = (request.user as { id: string }).id;
       const updateData = request.body;
 
       authLogger.info('Atualizando perfil', { userId, fields: Object.keys(updateData) });
@@ -587,16 +592,17 @@ export class AuthController {
         sortOrder = 'desc',
       } = request.query;
 
+      const filters: { search?: string; role?: UserRole; status?: UserStatus } = {};
+      if (search) filters.search = search;
+      if (role) filters.role = role;
+      if (status) filters.status = status;
+
       const options = {
         page,
         limit,
         sortBy,
         sortOrder,
-        filters: {
-          search,
-          role,
-          status,
-        },
+        filters,
       };
 
       const result = await userModel.list(options);
@@ -680,7 +686,7 @@ export class AuthController {
     reply: FastifyReply
   ): Promise<void> {
     try {
-      const adminId = request.user!.id;
+      const adminId = (request.user as { id: string }).id;
       const userData = request.body;
 
       authLogger.info('Admin criando usuário', { adminId, email: userData.email });
@@ -691,8 +697,8 @@ export class AuthController {
         fullName: userData.fullName,
         password: userData.password,
         role: userData.role || USER_ROLES.USER,
-        status: (userData.status as any) || 'active',
-        sendWelcomeEmail: userData.sendWelcomeEmail,
+        status: userData.status || 'active',
+        sendWelcomeEmail: userData.sendWelcomeEmail ?? true, // Se undefined, usar true
       });
 
       const responseData = {
@@ -732,9 +738,8 @@ export class AuthController {
   ): Promise<void> {
     try {
       const { id: targetUserId } = request.params;
-      const adminId = request.user!.id;
+      const adminId = (request.user as { id: string }).id;
 
-      // Medida de segurança: admin não pode resetar a própria senha por esta rota.
       if (targetUserId === adminId) {
         return reply.status(400).send({
           success: false,
@@ -780,7 +785,7 @@ export class AuthController {
       const updateData = request.body;
 
       authLogger.info('Admin atualizando usuário', {
-        adminId: request.user!.id,
+        adminId: (request.user as { id: string }).id,
         targetUserId: id,
         fields: Object.keys(updateData),
       });
@@ -818,7 +823,6 @@ export class AuthController {
         }
       }
 
-      // Atualizar usuário
       const updatedUser = await userModel.update(id, updateData);
 
       if (!updatedUser) {
@@ -857,12 +861,12 @@ export class AuthController {
       const { id } = request.params;
 
       authLogger.info('Admin deletando usuário', {
-        adminId: request.user!.id,
+        adminId: (request.user as { id: string }).id,
         targetUserId: id,
       });
 
       // Não permitir que admin delete a si mesmo
-      if (id === request.user!.id) {
+      if (id === (request.user as { id: string }).id) {
         return reply.status(400).send({
           success: false,
           message: 'Você não pode deletar sua própria conta',

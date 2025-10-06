@@ -1,3 +1,4 @@
+//apps/backend/src/modules/etl/controllers/etl-monitoring.controller.ts
 import { EtlMonitoringService } from '@/services/etl-monitoring.service.js';
 import { logger } from '@/shared/utils/logger.js';
 import { FastifyReply, FastifyRequest } from 'fastify';
@@ -11,10 +12,6 @@ export class EtlMonitoringController {
     this.etlMonitoringService = new EtlMonitoringService();
   }
 
-  /**
-   * GET /api/etl/status
-   * Retorna o status geral do ETL
-   */
   public async getStatus(request: FastifyRequest, reply: FastifyReply) {
     try {
       logger.info('📊 Requisição de status do ETL', {
@@ -39,16 +36,9 @@ export class EtlMonitoringController {
     }
   }
 
-  /**
-   * GET /api/etl/metrics?days=7
-   * Retorna métricas detalhadas do ETL
-   */
-  public async getMetrics(
-    request: FastifyRequest<{ Querystring: z.infer<typeof metricsQuerySchema> }>,
-    reply: FastifyReply
-  ) {
+  public async getMetrics(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { days } = request.query;
+      const { days } = request.query as z.infer<typeof metricsQuerySchema>;
 
       logger.info('📈 Requisição de métricas do ETL', {
         userId: (request.user as any)?.id,
@@ -72,16 +62,9 @@ export class EtlMonitoringController {
     }
   }
 
-  /**
-   * GET /api/etl/history?limit=20
-   * Retorna histórico de execuções
-   */
-  public async getHistory(
-    request: FastifyRequest<{ Querystring: z.infer<typeof historyQuerySchema> }>,
-    reply: FastifyReply
-  ) {
+  public async getHistory(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { limit } = request.query;
+      const { limit } = request.query as z.infer<typeof historyQuerySchema>;
 
       logger.info('📜 Requisição de histórico do ETL', {
         userId: (request.user as any)?.id,
@@ -105,11 +88,7 @@ export class EtlMonitoringController {
     }
   }
 
-  /**
-   * GET /api/etl/health
-   * Health check dos workers (simples e rápido)
-   */
-  public async getHealth(request: FastifyRequest, reply: FastifyReply) {
+  public async getHealth(_request: FastifyRequest, reply: FastifyReply) {
     try {
       const status = await this.etlMonitoringService.getStatus();
 

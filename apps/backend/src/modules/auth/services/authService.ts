@@ -101,6 +101,7 @@ export class AuthService {
           await emailService.sendWelcomeEmail(user.email, {
             name: user.fullName,
             username: user.username,
+            loginUrl: environment.frontend.url,
           });
           authLogger.info('Email de boas-vindas enviado', { userId: user.id });
         } catch (emailError) {
@@ -524,9 +525,9 @@ export class AuthService {
       // Atualizar senha e limpar tokens de reset
       await userModel.update(user.id, {
         password: hashedPassword,
-        passwordResetToken: undefined,
-        passwordResetExpires: undefined,
-        tokenVersion: user.tokenVersion + 1, // Invalidar todos os tokens existentes
+        passwordResetToken: null as any,
+        passwordResetExpires: null as any,
+        tokenVersion: user.tokenVersion + 1,
       });
 
       // Enviar email de confirmação se habilitado

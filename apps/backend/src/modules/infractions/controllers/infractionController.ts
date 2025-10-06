@@ -1,5 +1,5 @@
 // src/modules/infractions/controllers/infractionController.ts
-import { logger } from '@/shared/utils/logger.js'; // Importe o logger
+import { logger } from '@/shared/utils/logger.js';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { InfractionService } from '../services/infractionService.js';
@@ -15,16 +15,12 @@ export class InfractionController {
     this.infractionService = new InfractionService();
   }
 
-  public async getForDriver(
-    request: FastifyRequest<{ Params: z.infer<typeof infractionsParamsSchema> }>,
-    reply: FastifyReply
-  ) {
+  public async getForDriver(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { driverId } = request.params;
+      const { driverId } = request.params as z.infer<typeof infractionsParamsSchema>;
       const infractions = await this.infractionService.getInfractionsForDriver(driverId);
 
       logger.debug('Dados prontos para serem enviados na resposta:', infractions);
-      // =================================================================
 
       return reply.send(infractions);
     } catch (error) {

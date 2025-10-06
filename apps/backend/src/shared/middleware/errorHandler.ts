@@ -1,7 +1,7 @@
-import { FastifyError, FastifyRequest, FastifyReply } from 'fastify';
+import { FastifyError, FastifyReply, FastifyRequest } from 'fastify';
+import { environment } from '../../config/environment.js';
 import { logger } from '../utils/logger.js';
 import { responseHelper } from '../utils/responseHelper.js';
-import { environment } from '../../config/environment.js';
 
 export interface CustomError extends Error {
   statusCode?: number;
@@ -58,7 +58,7 @@ export class ErrorHandler {
       'FST_ERR_VALIDATION',
       'FST_ERR_BAD_STATUS_CODE',
       'FST_ERR_INVALID_URL',
-      'FST_ERR_ROUTE_NOT_FOUND'
+      'FST_ERR_ROUTE_NOT_FOUND',
     ];
 
     return operationalCodes.includes(error.code || '');
@@ -78,8 +78,8 @@ export class ErrorHandler {
       userAgent: request.headers['user-agent'],
       ip: request.ip,
       requestId: request.id,
-      userId: request.user?.id,
-      timestamp: new Date().toISOString()
+      userId: (request.user as any)?.id,
+      timestamp: new Date().toISOString(),
     };
 
     if (this.isOperationalError(error)) {
@@ -99,8 +99,8 @@ export class ErrorHandler {
       error: error.message,
       url: request.url,
       method: request.method,
-      userId: request.user?.id,
-      timestamp: new Date().toISOString()
+      userId: (request.user as any)?.id,
+      timestamp: new Date().toISOString(),
     });
   }
 
@@ -184,7 +184,7 @@ export class ErrorHandler {
     // Em produção, usar mensagens genéricas para alguns erros
     if (environment.NODE_ENV === 'production') {
       const statusCode = this.getStatusCode(error);
-      
+
       switch (statusCode) {
         case 400:
           return 'Dados de entrada inválidos';
@@ -216,7 +216,7 @@ export class ErrorHandler {
     }
 
     const statusCode = this.getStatusCode(error);
-    
+
     switch (statusCode) {
       case 400:
         return 'BAD_REQUEST';
@@ -247,7 +247,9 @@ export class ErrorHandler {
   ): CustomError {
     const error = new Error(message) as CustomError;
     error.statusCode = statusCode;
-    error.code = code;
+    if (code) {
+      (error as any).code = code;
+    }
     error.isOperational = isOperational;
     return error;
   }

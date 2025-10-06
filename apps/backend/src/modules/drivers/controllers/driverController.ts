@@ -2,7 +2,6 @@ import { FastifyReply, FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import { DriverService } from '../services/driverService.js';
 
-// Definimos o schema de validação para a query string
 export const searchQuerySchema = z.object({
   search: z.string().min(3, { message: 'O termo de busca deve ter no mínimo 3 caracteres.' }),
 });
@@ -18,10 +17,10 @@ export class DriverController {
    * Handler para a busca de motoristas.
    */
   public async search(
-    request: FastifyRequest<{ Querystring: z.infer<typeof searchQuerySchema> }>,
+    request: FastifyRequest, // ✅ Remover tipo genérico
     reply: FastifyReply
   ) {
-    const { search } = request.query;
+    const { search } = request.query as z.infer<typeof searchQuerySchema>; // ✅ Type assertion
     const drivers = await this.driverService.searchByName(search);
     return reply.send(drivers);
   }

@@ -1,4 +1,5 @@
 // apps/backend/src/modules/drivers/routes/driverRoutes.ts
+import { authMiddleware } from '@/modules/auth/middleware/authMiddleware.js'; // ✅ Importar authMiddleware
 import {
   InfractionController,
   infractionsParamsSchema,
@@ -22,7 +23,7 @@ export async function driverRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/drivers',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()], // ✅ Mudança aqui
       schema: {
         description: 'Busca motoristas por nome.',
         tags: ['Drivers'],
@@ -45,7 +46,7 @@ export async function driverRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/drivers/:driverId/infractions',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()], // ✅ Mudança aqui
       schema: {
         description: 'Busca as infrações de um motorista específico.',
         tags: ['Drivers', 'Infractions'],
@@ -73,7 +74,7 @@ export async function driverRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/drivers/:driverId/performance-report',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()], // ✅ Mudança aqui
       schema: {
         description:
           'Gera relatório de performance de um motorista para geração de formulário, baseado em uma data de referência e janela de dias (pra trás).',
@@ -89,19 +90,18 @@ export async function driverRoutes(fastify: FastifyInstance) {
     performanceReportController.getPerformanceReport.bind(performanceReportController)
   );
 
-  // ✅ NOVA ROTA: Endpoint para buscar relatório por intervalo de datas
   fastify.get(
     '/drivers/:driverId/performance-report/range',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()], // ✅ Mudança aqui
       schema: {
         description:
           'Gera relatório de performance de um motorista para geração de formulário, pesquisando entre uma data inicial e final.',
         tags: ['Drivers', 'Performance'],
-        params: performanceReportParamsSchema, // driverId
-        querystring: dateRangeQuerySchema, // startDate, endDate
+        params: performanceReportParamsSchema,
+        querystring: dateRangeQuerySchema,
         response: {
-          200: performanceReportResponseSchema, // O mesmo schema de resposta do relatório existente
+          200: performanceReportResponseSchema,
         },
         security: [{ bearerAuth: [] }],
       },

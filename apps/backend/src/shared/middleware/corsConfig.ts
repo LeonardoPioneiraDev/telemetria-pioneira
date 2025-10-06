@@ -1,10 +1,15 @@
-import { FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
+import { FastifyInstance } from 'fastify';
 import { environment } from '../../config/environment.js';
 import { logger } from '../utils/logger.js';
 
 export interface CorsOptions {
-  origin: boolean | string | string[] | RegExp | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void);
+  origin:
+    | boolean
+    | string
+    | string[]
+    | RegExp
+    | ((origin: string, callback: (err: Error | null, allow?: boolean) => void) => void);
   methods?: string | string[];
   allowedHeaders?: string | string[];
   credentials?: boolean;
@@ -28,7 +33,10 @@ export class CorsConfig {
   /**
    * Configurar CORS dinamicamente baseado no ambiente
    */
-  private getOriginHandler(): (origin: string, callback: (err: Error | null, allow?: boolean) => void) => void {
+  private getOriginHandler(): (
+    origin: string,
+    callback: (err: Error | null, allow?: boolean) => void
+  ) => void {
     return (origin, callback) => {
       // Permitir requisições sem origin (ex: mobile apps, Postman)
       if (!origin) {
@@ -76,7 +84,7 @@ export class CorsConfig {
       credentials: environment.cors.credentials,
       maxAge: environment.cors.maxAge,
       preflightContinue: false,
-      optionsSuccessStatus: 204
+      optionsSuccessStatus: 204,
     };
   }
 
@@ -86,29 +94,28 @@ export class CorsConfig {
   public async registerCors(fastify: FastifyInstance): Promise<void> {
     try {
       const corsOptions = this.getCorsOptions();
-      
-      await fastify.register(cors, corsOptions);
-      
+
+      await fastify.register(cors, corsOptions as any);
+
       logger.info('✅ CORS configurado com sucesso', {
         allowedOrigins: environment.cors.origin,
         methods: environment.cors.methods,
-        credentials: environment.cors.credentials
+        credentials: environment.cors.credentials,
       });
 
       // Hook para log de requisições CORS
-      fastify.addHook('onRequest', async (request, reply) => {
+      fastify.addHook('onRequest', async (request, _reply) => {
         const origin = request.headers.origin;
         const method = request.method;
-        
+
         if (origin && method === 'OPTIONS') {
           logger.debug('CORS Preflight:', {
             origin,
             method: request.headers['access-control-request-method'],
-            headers: request.headers['access-control-request-headers']
+            headers: request.headers['access-control-request-headers'],
           });
         }
       });
-
     } catch (error) {
       logger.error('❌ Erro ao configurar CORS:', error);
       throw error;
@@ -119,19 +126,22 @@ export class CorsConfig {
    * Middleware customizado para headers de segurança
    */
   public addSecurityHeaders() {
-    return async (request: any, reply: any) => {
+    return async (_request: any, reply: any) => {
       // Headers de segurança adicionais
       reply.header('X-Content-Type-Options', 'nosniff');
       reply.header('X-Frame-Options', 'DENY');
       reply.header('X-XSS-Protection', '1; mode=block');
       reply.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-      
+
       // Remover header que expõe tecnologia
       reply.removeHeader('X-Powered-By');
-      
+
       // CSP básico (pode ser customizado conforme necessário)
       if (environment.helmet.cspEnabled) {
-        reply.header('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';");
+        reply.header(
+          'Content-Security-Policy',
+          "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline';"
+        );
       }
     };
   }

@@ -2,7 +2,7 @@ import Fastify, { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import { emailService } from './config/email.js';
 import { environment } from './config/environment.js';
 import { databaseConnection } from './database/connection.js';
-import { authRoutes } from './modules/auth/routes/authRoutes.js';
+import authRoutes from './modules/auth/routes/authRoutes.js';
 import { Scheduler } from './scheduler.js';
 import { corsConfig } from './shared/middleware/corsConfig.js';
 import { errorHandlerPlugin } from './shared/middleware/errorHandler.js';
@@ -17,8 +17,8 @@ import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-
 import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
-import { userRoutes } from './modules/users/routes/userRoutes.js';
 import { historicalLoadRoutes } from './modules/etl/routes/historical-load.routes.js';
+import { userRoutes } from './modules/users/routes/userRoutes.js';
 
 // Extender o tipo FastifyRequest para incluir startTime
 declare module 'fastify' {

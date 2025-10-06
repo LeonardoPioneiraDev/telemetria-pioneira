@@ -1,476 +1,854 @@
-//apps/backend/src/modules/auth/routes/authRoutes.ts
-import { FastifyInstance } from 'fastify';
-import z from 'zod';
-import { USER_PERMISSIONS } from '../../../shared/constants/index.js';
-import { rateLimiter } from '../../../shared/middleware/rateLimiter.js';
-import { authController } from '../controllers/authController.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
-import { authValidators } from '../validators/authValidators.js';
+//apps/backend/src/modules/auth/controllers/authController.ts
+import { FastifyReply, FastifyRequest } from 'fastify';
+import type { UserRole, UserStatus } from '../../../shared/constants/index.js';
+import { USER_ROLES } from '../../../shared/constants/index.js';
+import { authLogger, logger } from '../../../shared/utils/logger.js';
+import { userModel } from '../models/User.js';
+import { authService } from '../services/authService.js';
 
-export async function authRoutes(fastify: FastifyInstance) {
-  // Prefixo para todas as rotas de autenticação
-  await fastify.register(
-    async function (fastify) {
-      // ==========================================
-      // 🔓 ROTAS PÚBLICAS (SEM AUTENTICAÇÃO)
-      // ==========================================
-
-      // Registro de usuário
-      fastify.post(
-        '/login',
-        {
-          // O preHandler continua o mesmo
-          preHandler: [rateLimiter.getAuthRateLimit()],
-          schema: {
-            description: 'Fazer login',
-            tags: ['Autenticação'],
-            // 2. O 'body' agora é um schema Zod
-            body: z.object({
-              email: z.string().email({ message: 'Formato de e-mail inválido.' }),
-              password: z.string().min(1, { message: 'A senha é obrigatória.' }),
-              rememberMe: z.boolean().optional().default(false),
-            }),
-            response: {
-              200: z.object({
-                success: z.boolean(),
-                message: z.string(),
-                data: z.object({
-                  user: z.object({
-                    /* defina as propriedades do usuário aqui */
-                  }),
-                  accessToken: z.string(),
-                  refreshToken: z.string(),
-                  expiresIn: z.string(),
-                }),
-              }),
-            },
-          },
-        },
-        authController.login
-      );
-
-      // Rota de Registro (Convertida para Zod)
-      fastify.post(
-        '/register',
-        {
-          preHandler: [rateLimiter.getAuthRateLimit()],
-          schema: {
-            description: 'Registrar novo usuário',
-            tags: ['Autenticação'],
-            body: z.object({
-              email: z.string().email(),
-              username: z.string().min(3).max(50),
-              fullName: z.string().min(2).max(100),
-              password: z.string().min(8),
-              acceptTerms: z
-                .boolean()
-                .refine(val => val === true, { message: 'É necessário aceitar os termos de uso.' }),
-            }),
-            response: {
-              201: z.object({
-                success: z.boolean(),
-                message: z.string(),
-                data: z.object({
-                  id: z.string(),
-                  email: z.string(),
-                  username: z.string(),
-                  fullName: z.string(),
-                  role: z.string(),
-                  status: z.string(),
-                  emailVerified: z.boolean(),
-                  createdAt: z.string(),
-                }),
-              }),
-            },
-          },
-        },
-        authController.register
-      );
-
-      // Renovar token
-      fastify.post(
-        '/refresh',
-        {
-          preHandler: [authValidators.refreshToken()],
-          schema: {
-            description: 'Renovar token de acesso',
-            tags: ['Autenticação'],
-            body: {
-              type: 'object',
-              required: ['refreshToken'],
-              properties: {
-                refreshToken: { type: 'string' },
-              },
-            },
-          },
-        },
-        authController.refreshToken
-      );
-
-      // Solicitar reset de senha
-      fastify.post(
-        '/password/reset-request',
-        {
-          preHandler: [
-            rateLimiter.getPasswordResetRateLimit(),
-            authValidators.requestPasswordReset(),
-          ],
-          schema: {
-            description: 'Solicitar reset de senha',
-            tags: ['Autenticação'],
-            // ✅ CORREÇÃO: Convertido para Zod
-            body: z.object({
-              email: z.string().email({ message: 'Por favor, insira um email válido.' }),
-            }),
-          },
-        },
-        authController.requestPasswordReset
-      );
-
-      /**
-       *  Rota para admin resetar a senha de um usuário
-       */
-      fastify.post(
-        '/users/:id/reset-password-admin',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            // Usamos a permissão de UPDATE, pois é uma ação que modifica o estado do usuário
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_UPDATE),
-            authValidators.validateId(), // Reutiliza o validador de ID
-          ],
-          schema: {
-            description: 'Forçar a redefinição de senha de um usuário (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            params: z.object({
-              id: z.string().uuid({ message: 'O ID do usuário deve ser um UUID válido.' }),
-            }),
-            response: {
-              200: z.object({
-                success: z.boolean(),
-                message: z.string(),
-              }),
-            },
-          },
-        },
-        authController.resetPasswordByAdmin
-      );
-
-      // Resetar senha
-      fastify.post(
-        '/password/reset',
-        {
-          preHandler: [rateLimiter.getPasswordResetRateLimit(), authValidators.resetPassword()],
-          schema: {
-            description: 'Resetar senha com token',
-            tags: ['Autenticação'],
-            // ✅ CORREÇÃO: Convertido para Zod
-            body: z
-              .object({
-                token: z.string({ required_error: 'O token é obrigatório.' }),
-                newPassword: z
-                  .string()
-                  .min(8, { message: 'A nova senha deve ter no mínimo 8 caracteres.' }),
-                confirmPassword: z.string(),
-              })
-              .refine(data => data.newPassword === data.confirmPassword, {
-                message: 'A confirmação de senha não confere com a nova senha.',
-                path: ['confirmPassword'], // Indica qual campo está com o erro
-              }),
-          },
-        },
-        authController.resetPassword
-      );
-
-      // Verificar se email existe
-      fastify.get(
-        '/check/email',
-        {
-          preHandler: [authValidators.checkEmail()],
-          schema: {
-            description: 'Verificar se email já existe',
-            tags: ['Autenticação'],
-            querystring: {
-              type: 'object',
-              required: ['email'],
-              properties: {
-                email: { type: 'string', format: 'email' },
-              },
-            },
-          },
-        },
-        authController.checkEmail
-      );
-
-      // Verificar se username existe
-      fastify.get(
-        '/check/username',
-        {
-          preHandler: [authValidators.checkUsername()],
-          schema: {
-            description: 'Verificar se username já existe',
-            tags: ['Autenticação'],
-            querystring: {
-              type: 'object',
-              required: ['username'],
-              properties: {
-                username: { type: 'string', minLength: 3, maxLength: 50 },
-              },
-            },
-          },
-        },
-        authController.checkUsername
-      );
-
-      // ==========================================
-      // 🔒 ROTAS PROTEGIDAS (COM AUTENTICAÇÃO)
-      // ==========================================
-
-      // Logout
-      fastify.post(
-        '/logout',
-        {
-          preHandler: [authMiddleware.authenticate(), authValidators.logout()],
-          schema: {
-            description: 'Fazer logout',
-            tags: ['Autenticação'],
-            security: [{ bearerAuth: [] }],
-          },
-        },
-        authController.logout
-      );
-
-      // Obter perfil
-      fastify.get(
-        '/profile',
-        {
-          preHandler: [authMiddleware.authenticate()],
-          schema: {
-            description: 'Obter perfil do usuário logado',
-            tags: ['Perfil'],
-            security: [{ bearerAuth: [] }],
-          },
-        },
-        authController.getProfile
-      );
-
-      // Atualizar perfil
-      fastify.put(
-        '/profile',
-        {
-          preHandler: [authMiddleware.authenticate(), authValidators.updateProfile()],
-          schema: {
-            description: 'Atualizar perfil do usuário logado',
-            tags: ['Perfil'],
-            security: [{ bearerAuth: [] }],
-            body: {
-              type: 'object',
-              properties: {
-                fullName: { type: 'string', minLength: 2, maxLength: 100 },
-                username: { type: 'string', minLength: 3, maxLength: 50 },
-                email: { type: 'string', format: 'email' },
-              },
-            },
-          },
-        },
-        authController.updateProfile
-      );
-
-      // Alterar senha
-      fastify.put(
-        '/password/change',
-        {
-          preHandler: [authMiddleware.authenticate(), authValidators.changePassword()],
-          schema: {
-            description: 'Alterar senha do usuário logado',
-            tags: ['Autenticação'],
-            security: [{ bearerAuth: [] }],
-            body: {
-              type: 'object',
-              required: ['currentPassword', 'newPassword', 'confirmPassword'],
-              properties: {
-                currentPassword: { type: 'string' },
-                newPassword: { type: 'string', minLength: 8 },
-                confirmPassword: { type: 'string' },
-              },
-            },
-          },
-        },
-        authController.changePassword
-      );
-
-      // ==========================================
-      // 👑 ROTAS ADMINISTRATIVAS
-      // ==========================================
-
-      // Listar usuários (Admin)
-      fastify.get(
-        '/users',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_LIST),
-          ],
-          schema: {
-            description: 'Listar usuários (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            querystring: z.object({
-              page: z.coerce.number().int().positive().default(1),
-              limit: z.coerce.number().int().positive().max(100).default(10),
-              search: z.string().min(2).max(100).optional(),
-              role: z.enum(['admin', 'user', 'moderator', 'viewer']).optional(),
-              status: z.enum(['active', 'inactive', 'suspended', 'pending']).optional(),
-              sortBy: z
-                .enum(['createdAt', 'updatedAt', 'email', 'username', 'fullName'])
-                .default('createdAt'),
-              sortOrder: z.enum(['asc', 'desc']).default('desc'),
-            }),
-          },
-        },
-        authController.listUsers
-      );
-
-      // Obter usuário por ID (Admin)
-      fastify.get(
-        '/users/:id',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_READ),
-            authValidators.validateId(),
-          ],
-          schema: {
-            description: 'Obter usuário por ID (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            params: {
-              type: 'object',
-              required: ['id'],
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-              },
-            },
-          },
-        },
-        authController.getUserById
-      );
-
-      // Criar usuário (Admin)
-      fastify.post(
-        '/users',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_CREATE),
-            // 2. REMOVER a validação duplicada com Joi
-            // authValidators.createUser(),
-          ],
-          schema: {
-            description: 'Criar usuário (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            // 3. SUBSTITUIR o schema JSON por um schema Zod
-            body: z.object({
-              email: z.string().email({ message: 'Email inválido' }),
-              username: z
-                .string()
-                .min(3)
-                .regex(/^[a-zA-Z0-9_]+$/, {
-                  message: 'Nome de usuário pode conter apenas letras, números e underscore (_).',
-                }),
-              fullName: z.string().min(2, { message: 'Nome deve ter pelo menos 2 caracteres' }),
-              // 4. Deixar a senha opcional, como planejamos
-              password: z
-                .string()
-                .min(8, { message: 'Senha deve ter pelo menos 8 caracteres' })
-                .optional(),
-              role: z.enum(['admin', 'user', 'moderator', 'viewer']).default('user'),
-              status: z.enum(['active', 'inactive', 'pending']).default('active'),
-              sendWelcomeEmail: z.boolean().default(true),
-            }),
-            response: {
-              201: z.object({
-                success: z.boolean(),
-                message: z.string(),
-                data: z.object({
-                  user: z.any(), // Defina a estrutura do usuário aqui se desejar
-                  temporaryPassword: z.string().optional(),
-                }),
-              }),
-            },
-          },
-        },
-        authController.createUser
-      );
-
-      // Atualizar usuário (Admin)
-      fastify.put(
-        '/users/:id',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_UPDATE),
-            authValidators.updateUser(),
-          ],
-          schema: {
-            description: 'Atualizar usuário (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            params: {
-              type: 'object',
-              required: ['id'],
-              properties: {
-                id: { type: 'string', format: 'uuid' },
-              },
-            },
-            body: {
-              type: 'object',
-              properties: {
-                email: { type: 'string', format: 'email' },
-                username: { type: 'string', minLength: 3, maxLength: 50 },
-                fullName: { type: 'string', minLength: 2, maxLength: 100 },
-                password: { type: 'string', minLength: 8 },
-                role: { type: 'string', enum: ['admin', 'user', 'moderator', 'viewer'] },
-                status: { type: 'string', enum: ['active', 'inactive', 'suspended', 'pending'] },
-              },
-            },
-          },
-        },
-        authController.updateUser
-      );
-
-      // Deletar usuário (Admin)
-      fastify.delete(
-        '/users/:id',
-        {
-          preHandler: [
-            authMiddleware.authenticate(),
-            authMiddleware.requirePermission(USER_PERMISSIONS.USER_DELETE),
-            // authValidators.validateId() foi REMOVIDO daqui
-          ],
-          schema: {
-            description: 'Deletar usuário (Admin)',
-            tags: ['Administração'],
-            security: [{ bearerAuth: [] }],
-            // ✅ CORRIGIDO para usar Zod
-            params: z.object({
-              id: z.string().uuid({ message: 'O ID do usuário deve ser um UUID válido.' }),
-            }),
-            response: {
-              200: z.object({
-                success: z.boolean(),
-                message: z.string(),
-              }),
-            },
-          },
-        },
-        authController.deleteUser
-      );
-    },
-    { prefix: '/auth' }
-  );
+export interface RegisterBody {
+  email: string;
+  username: string;
+  fullName: string;
+  password: string;
+  acceptTerms: boolean;
 }
 
-export default authRoutes;
+export interface LoginBody {
+  email: string;
+  password: string;
+  rememberMe?: boolean;
+}
+
+export interface RefreshTokenBody {
+  refreshToken: string;
+}
+
+export interface PasswordResetRequestBody {
+  email: string;
+}
+
+export interface PasswordResetBody {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordBody {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface UpdateProfileBody {
+  fullName?: string;
+  username?: string;
+  email?: string;
+}
+
+export interface CreateUserBody {
+  email: string;
+  username: string;
+  fullName: string;
+  password: string;
+  role?: UserRole;
+  status?: UserStatus;
+  sendWelcomeEmail?: boolean;
+}
+
+export interface UpdateUserBody {
+  email?: string;
+  username?: string;
+  fullName?: string;
+  password?: string;
+  role?: UserRole;
+  status?: UserStatus;
+}
+
+export interface ListUsersQuery {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: UserRole;
+  status?: UserStatus;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export class AuthController {
+  private static instance: AuthController;
+
+  private constructor() {}
+
+  public static getInstance(): AuthController {
+    if (!AuthController.instance) {
+      AuthController.instance = new AuthController();
+    }
+    return AuthController.instance;
+  }
+
+  /**
+   * Registrar novo usuário
+   */
+  public async register(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { email, username, fullName, password, acceptTerms } = request.body as RegisterBody;
+
+      authLogger.info('Tentativa de registro', { email, username });
+
+      const result = await authService.register({
+        email,
+        username,
+        fullName,
+        password,
+        acceptTerms,
+      });
+
+      return reply.status(201).send({
+        success: true,
+        message: result.message,
+        data: result.user,
+      });
+    } catch (error) {
+      authLogger.error('Erro no registro:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('já está em uso') || error.message.includes('já existe')) {
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
+        }
+
+        if (error.message.includes('não atende aos critérios')) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no registro',
+      });
+    }
+  }
+
+  /**
+   * Fazer login
+   */
+  public async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { email, password, rememberMe } = request.body as LoginBody;
+      const ipAddress = request.ip;
+
+      authLogger.info('Tentativa de login', { email, ip: ipAddress });
+
+      const result = await authService.login(
+        {
+          email,
+          password,
+          rememberMe: rememberMe ?? false,
+        },
+        ipAddress
+      );
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Login realizado com sucesso',
+        data: {
+          user: result.user,
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          expiresIn: result.expiresIn,
+        },
+      });
+    } catch (error) {
+      authLogger.error('Erro no login:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('Credenciais inválidas')) {
+          return reply.status(401).send({
+            success: false,
+            message: 'Email ou senha incorretos',
+            error: 'AUTHENTICATION_ERROR',
+          });
+        }
+
+        if (error.message.includes('bloqueada')) {
+          return reply.status(423).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_LOCKED',
+          });
+        }
+
+        if (error.message.includes('inativa') || error.message.includes('suspensa')) {
+          return reply.status(403).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_DISABLED',
+          });
+        }
+
+        if (error.message.includes('pendente')) {
+          return reply.status(403).send({
+            success: false,
+            message: error.message,
+            error: 'ACCOUNT_PENDING',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no login',
+      });
+    }
+  }
+
+  /**
+   * Renovar token de acesso
+   */
+  public async refreshToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { refreshToken } = request.body as RefreshTokenBody;
+
+      authLogger.info('Tentativa de renovação de token');
+
+      const result = await authService.refreshToken(refreshToken);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Token renovado com sucesso',
+        data: result,
+      });
+    } catch (error) {
+      authLogger.error('Erro na renovação de token:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('expirado') || error.message.includes('inválido')) {
+          return reply.status(401).send({
+            success: false,
+            message: 'Token de refresh inválido ou expirado',
+            error: 'AUTHENTICATION_ERROR',
+          });
+        }
+
+        if (error.message.includes('não encontrado')) {
+          return reply.status(404).send({
+            success: false,
+            message: 'Usuário não encontrado',
+            error: 'NOT_FOUND',
+          });
+        }
+
+        if (error.message.includes('inativo')) {
+          return reply.status(403).send({
+            success: false,
+            message: 'Usuário inativo',
+            error: 'USER_INACTIVE',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na renovação do token',
+      });
+    }
+  }
+
+  /**
+   * Solicitar reset de senha
+   */
+  public async requestPasswordReset(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { email } = request.body as PasswordResetRequestBody;
+
+      authLogger.info('Solicitação de reset de senha', { email });
+
+      const result = await authService.requestPasswordReset({ email });
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      authLogger.error('Erro na solicitação de reset de senha:', error);
+
+      if (error instanceof Error && error.message.includes('Falha ao enviar email')) {
+        return reply.status(500).send({
+          success: false,
+          message: 'Falha ao enviar email de recuperação',
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na solicitação de reset',
+      });
+    }
+  }
+
+  /**
+   * Resetar senha
+   */
+  public async resetPassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { token, newPassword } = request.body as PasswordResetBody;
+
+      authLogger.info('Tentativa de reset de senha');
+
+      const result = await authService.resetPassword({ token, newPassword });
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      authLogger.error('Erro no reset de senha:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('inválido') || error.message.includes('expirado')) {
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'INVALID_RESET_TOKEN',
+          });
+        }
+
+        if (error.message.includes('não atende aos critérios')) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
+        }
+
+        if (error.message.includes('deve ser diferente')) {
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'SAME_PASSWORD',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no reset de senha',
+      });
+    }
+  }
+
+  /**
+   * Alterar senha (usuário logado)
+   */
+  public async changePassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { currentPassword, newPassword } = request.body as ChangePasswordBody;
+      const userId = (request.user as { id: string }).id;
+
+      authLogger.info('Tentativa de alteração de senha', { userId });
+
+      const result = await authService.changePassword(userId, {
+        currentPassword,
+        newPassword,
+      });
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      authLogger.error('Erro na alteração de senha:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('incorreta')) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Senha atual incorreta',
+            error: 'INVALID_CURRENT_PASSWORD',
+          });
+        }
+
+        if (error.message.includes('não atende aos critérios')) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Dados inválidos',
+            errors: [error.message],
+            error: 'VALIDATION_ERROR',
+          });
+        }
+
+        if (error.message.includes('deve ser diferente')) {
+          return reply.status(400).send({
+            success: false,
+            message: error.message,
+            error: 'SAME_PASSWORD',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na alteração de senha',
+      });
+    }
+  }
+
+  /**
+   * Logout
+   */
+  public async logout(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const userId = (request.user as { id: string }).id;
+
+      authLogger.info('Tentativa de logout', { userId });
+
+      const result = await authService.logout(userId);
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      authLogger.error('Erro no logout:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno no logout',
+      });
+    }
+  }
+
+  /**
+   * Obter perfil do usuário logado
+   */
+  public async getProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const profile = await authService.getProfile(userId);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Perfil recuperado com sucesso',
+        data: profile,
+      });
+    } catch (error) {
+      logger.error('Erro ao obter perfil:', error);
+
+      if (error instanceof Error && error.message.includes('não encontrado')) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao obter perfil',
+      });
+    }
+  }
+
+  /**
+   * Atualizar perfil do usuário logado
+   */
+  public async updateProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const userId = (request.user as { id: string }).id;
+      const updateData = request.body as UpdateProfileBody;
+
+      authLogger.info('Atualizando perfil', { userId, fields: Object.keys(updateData) });
+
+      const updatedProfile = await authService.updateProfile(userId, updateData);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Perfil atualizado com sucesso',
+        data: updatedProfile,
+      });
+    } catch (error) {
+      authLogger.error('Erro ao atualizar perfil:', error);
+
+      if (error instanceof Error) {
+        if (error.message.includes('já está em uso')) {
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
+        }
+
+        if (error.message.includes('não encontrado')) {
+          return reply.status(404).send({
+            success: false,
+            message: 'Usuário não encontrado',
+            error: 'NOT_FOUND',
+          });
+        }
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao atualizar perfil',
+      });
+    }
+  }
+
+  /**
+   * Verificar se email existe
+   */
+  public async checkEmail(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { email } = request.query as { email: string };
+
+      const result = await authService.checkEmailExists(email);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Verificação realizada',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Erro ao verificar email:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na verificação',
+      });
+    }
+  }
+
+  /**
+   * Verificar se username existe
+   */
+  public async checkUsername(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { username } = request.query as { username: string };
+
+      const result = await authService.checkUsernameExists(username);
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Verificação realizada',
+        data: result,
+      });
+    } catch (error) {
+      logger.error('Erro ao verificar username:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno na verificação',
+      });
+    }
+  }
+
+  /**
+   * Listar usuários (Admin)
+   */
+  public async listUsers(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const {
+        page = 1,
+        limit = 10,
+        search,
+        role,
+        status,
+        sortBy = 'createdAt',
+        sortOrder = 'desc',
+      } = request.query as ListUsersQuery;
+
+      const filters: { search?: string; role?: UserRole; status?: UserStatus } = {};
+      if (search) filters.search = search;
+      if (role) filters.role = role;
+      if (status) filters.status = status;
+
+      const options = {
+        page,
+        limit,
+        sortBy,
+        sortOrder,
+        filters,
+      };
+
+      const result = await userModel.list(options);
+
+      const sanitizedUsers = result.users.map(user => ({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        fullName: user.fullName,
+        role: user.role,
+        status: user.status,
+        emailVerified: user.emailVerified,
+        lastLoginAt: user.lastLoginAt,
+        tokenVersion: user.tokenVersion,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      }));
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuários recuperados com sucesso',
+        data: sanitizedUsers,
+        pagination: {
+          page: result.page,
+          limit: result.limit,
+          total: result.total,
+          totalPages: result.totalPages,
+        },
+      });
+    } catch (error) {
+      logger.error('Erro ao listar usuários:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao listar usuários',
+      });
+    }
+  }
+
+  /**
+   * Obter usuário por ID (Admin)
+   */
+  public async getUserById(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = request.params as { id: string };
+
+      const user = await userModel.findById(id);
+
+      if (!user) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      const { password, ...sanitizedUser } = user;
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário recuperado com sucesso',
+        data: sanitizedUser,
+      });
+    } catch (error) {
+      logger.error('Erro ao obter usuário por ID:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao obter usuário',
+      });
+    }
+  }
+
+  /**
+   * Criar usuário (Admin)
+   */
+  public async createUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const adminId = (request.user as { id: string }).id;
+      const userData = request.body as CreateUserBody;
+
+      authLogger.info('Admin criando usuário', { adminId, email: userData.email });
+
+      const result = await authService.createUserByAdmin({
+        email: userData.email,
+        username: userData.username,
+        fullName: userData.fullName,
+        password: userData.password,
+        role: userData.role || USER_ROLES.USER,
+        status: userData.status || 'active',
+        sendWelcomeEmail: userData.sendWelcomeEmail ?? true,
+      });
+
+      const responseData = {
+        user: result.user,
+        temporaryPassword: result.temporaryPassword,
+      };
+
+      return reply.status(201).send({
+        success: true,
+        message: 'Usuário criado com sucesso',
+        data: responseData,
+      });
+    } catch (error) {
+      authLogger.error('Erro ao criar usuário:', error);
+      if (error instanceof Error) {
+        if (error.message.includes('já está em uso')) {
+          return reply.status(409).send({
+            success: false,
+            message: error.message,
+            error: 'CONFLICT',
+          });
+        }
+      }
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao criar usuário',
+      });
+    }
+  }
+
+  /**
+   * Admin força a redefinição de senha de um usuário.
+   */
+  public async resetPasswordByAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id: targetUserId } = request.params as { id: string };
+      const adminId = (request.user as { id: string }).id;
+
+      if (targetUserId === adminId) {
+        return reply.status(400).send({
+          success: false,
+          message:
+            'Você não pode resetar sua própria senha através desta função. Use a opção "Esqueci minha senha".',
+          error: 'CANNOT_RESET_SELF',
+        });
+      }
+
+      const result = await authService.initiatePasswordResetByAdmin(targetUserId, adminId);
+
+      return reply.status(200).send({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      authLogger.error('Erro no controller de reset de senha pelo admin:', error);
+
+      if (error instanceof Error && error.message.includes('não encontrado')) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário alvo não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao tentar resetar a senha do usuário',
+      });
+    }
+  }
+
+  /**
+   * Atualizar usuário (Admin)
+   */
+  public async updateUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = request.params as { id: string };
+      const updateData = request.body as UpdateUserBody;
+
+      authLogger.info('Admin atualizando usuário', {
+        adminId: (request.user as { id: string }).id,
+        targetUserId: id,
+        fields: Object.keys(updateData),
+      });
+
+      const existingUser = await userModel.findById(id);
+      if (!existingUser) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      if (updateData.email) {
+        const emailExists = await userModel.emailExists(updateData.email, id);
+        if (emailExists) {
+          return reply.status(409).send({
+            success: false,
+            message: 'Email já está em uso por outro usuário',
+            error: 'CONFLICT',
+          });
+        }
+      }
+
+      if (updateData.username) {
+        const usernameExists = await userModel.usernameExists(updateData.username, id);
+        if (usernameExists) {
+          return reply.status(409).send({
+            success: false,
+            message: 'Nome de usuário já está em uso por outro usuário',
+            error: 'CONFLICT',
+          });
+        }
+      }
+
+      const updatedUser = await userModel.update(id, updateData);
+
+      if (!updatedUser) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      const { password, ...sanitizedUser } = updatedUser;
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário atualizado com sucesso',
+        data: sanitizedUser,
+      });
+    } catch (error) {
+      authLogger.error('Erro ao atualizar usuário:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao atualizar usuário',
+      });
+    }
+  }
+
+  /**
+   * Deletar usuário (Admin)
+   */
+  public async deleteUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = request.params as { id: string };
+
+      authLogger.info('Admin deletando usuário', {
+        adminId: (request.user as { id: string }).id,
+        targetUserId: id,
+      });
+
+      if (id === (request.user as { id: string }).id) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Você não pode deletar sua própria conta',
+          error: 'CANNOT_DELETE_SELF',
+        });
+      }
+
+      const deleted = await userModel.delete(id);
+
+      if (!deleted) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Usuário não encontrado',
+          error: 'NOT_FOUND',
+        });
+      }
+
+      return reply.status(200).send({
+        success: true,
+        message: 'Usuário deletado com sucesso',
+      });
+    } catch (error) {
+      authLogger.error('Erro ao deletar usuário:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Erro interno ao deletar usuário',
+      });
+    }
+  }
+}
+
+export const authController = AuthController.getInstance();
+export default authController;

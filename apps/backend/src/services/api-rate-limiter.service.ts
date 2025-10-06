@@ -54,7 +54,7 @@ export class ApiRateLimiter {
       });
     });
 
-    this.limiter.on('retry', (error, jobInfo) => {
+    this.limiter.on('retry', (_error, jobInfo) => {
       logger.info('🔄 Rate limiter: retry automático', {
         retryCount: jobInfo.retryCount,
         nextRetryIn: `${jobInfo.retryCount * 1000}ms`,

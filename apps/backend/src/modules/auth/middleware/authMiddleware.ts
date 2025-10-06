@@ -94,7 +94,7 @@ export class AuthMiddleware {
    * Middleware de autenticação opcional
    */
   public optionalAuthenticate() {
-    return async (request: FastifyRequest, reply: FastifyReply) => {
+    return async (request: FastifyRequest) => {
       try {
         const token = this.extractToken(request);
 
@@ -127,13 +127,15 @@ export class AuthMiddleware {
         return responseHelper.authenticationError(reply, 'Autenticação necessária');
       }
 
-      if (!this.hasPermission(request.user, permission)) {
+      const user = request.user as AuthenticatedUser;
+
+      if (!this.hasPermission(user, permission)) {
         securityLogger.warn('Acesso negado por falta de permissão', {
-          userId: request.user.id,
-          email: request.user.email,
-          role: request.user.role,
+          userId: user.id,
+          email: user.email,
+          role: user.role,
           requiredPermission: permission,
-          userPermissions: request.user.permissions,
+          userPermissions: user.permissions,
           ip: request.ip,
           url: request.url,
           method: request.method,
@@ -143,7 +145,7 @@ export class AuthMiddleware {
       }
 
       securityLogger.info('Acesso autorizado', {
-        userId: request.user.id,
+        userId: user.id,
         permission,
         url: request.url,
         method: request.method,
@@ -160,11 +162,13 @@ export class AuthMiddleware {
         return responseHelper.authenticationError(reply, 'Autenticação necessária');
       }
 
-      if (!this.hasRole(request.user, role)) {
+      const user = request.user as AuthenticatedUser;
+
+      if (!this.hasRole(user, role)) {
         securityLogger.warn('Acesso negado por falta de role', {
-          userId: request.user.id,
-          email: request.user.email,
-          userRole: request.user.role,
+          userId: user.id,
+          email: user.email,
+          userRole: user.role,
           requiredRole: role,
           ip: request.ip,
           url: request.url,
@@ -175,7 +179,7 @@ export class AuthMiddleware {
       }
 
       securityLogger.info('Acesso autorizado por role', {
-        userId: request.user.id,
+        userId: user.id,
         role,
         url: request.url,
         method: request.method,
@@ -192,15 +196,17 @@ export class AuthMiddleware {
         return responseHelper.authenticationError(reply, 'Autenticação necessária');
       }
 
+      const user = request.user as AuthenticatedUser;
+
       const targetUserId = (request.params as any)[userIdParam];
-      const isOwner = request.user.id === targetUserId;
-      const isAdmin = this.hasRole(request.user, 'admin');
+      const isOwner = user.id === targetUserId;
+      const isAdmin = this.hasRole(user, 'admin');
 
       if (!isOwner && !isAdmin) {
         securityLogger.warn('Acesso negado - não é proprietário nem admin', {
-          userId: request.user.id,
+          userId: user.id,
           targetUserId,
-          role: request.user.role,
+          role: user.role,
           ip: request.ip,
           url: request.url,
           method: request.method,
@@ -213,7 +219,7 @@ export class AuthMiddleware {
       }
 
       securityLogger.info('Acesso autorizado por propriedade/admin', {
-        userId: request.user.id,
+        userId: user.id,
         targetUserId,
         isOwner,
         isAdmin,

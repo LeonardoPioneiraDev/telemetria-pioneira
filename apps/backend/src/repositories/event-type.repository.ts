@@ -14,10 +14,10 @@ export class EventTypeRepository extends BaseRepository<EventType> {
   /**
    * Busca todos os IDs externos de tipos de evento existentes no banco.
    */
-  async findAllExternalIds(): Promise<{ external_id: number }[]> {
+  async findAllExternalIds(): Promise<{ external_id: bigint }[]> {
     return this.repository.find({
       select: ['external_id'],
-    });
+    }) as any;
   }
   /**
    * Busca entidades por uma lista de IDs externos.

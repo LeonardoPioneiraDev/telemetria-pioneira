@@ -14,10 +14,10 @@ export class DriverRepository extends BaseRepository<Driver> {
   /**
    * Busca todos os IDs externos de motoristas existentes no banco.
    */
-  async findAllExternalIds(): Promise<{ external_id: number }[]> {
+  async findAllExternalIds(): Promise<{ external_id: bigint }[]> {
     return this.repository.find({
       select: ['external_id'],
-    });
+    }) as any;
   }
 
   public async findById(id: number): Promise<Driver | null> {

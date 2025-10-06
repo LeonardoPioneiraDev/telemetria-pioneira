@@ -1,3 +1,5 @@
+//apps/backend/src/modules/etl/routes/historical-load.routes.ts
+import { authMiddleware } from '@/modules/auth/middleware/authMiddleware.js';
 import { FastifyInstance } from 'fastify';
 import {
   HistoricalLoadController,
@@ -9,11 +11,10 @@ import {
 export async function historicalLoadRoutes(fastify: FastifyInstance) {
   const controller = new HistoricalLoadController();
 
-  // Iniciar carga histórica
   fastify.post(
     '/etl/historical/start',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()],
       schema: {
         description: 'Inicia uma carga histórica de eventos',
         tags: ['ETL', 'Historical'],
@@ -24,11 +25,10 @@ export async function historicalLoadRoutes(fastify: FastifyInstance) {
     controller.startLoad.bind(controller)
   );
 
-  // Obter status de uma carga
   fastify.get(
     '/etl/historical/:jobId',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()],
       schema: {
         description: 'Obtém o status de uma carga histórica',
         tags: ['ETL', 'Historical'],
@@ -39,11 +39,10 @@ export async function historicalLoadRoutes(fastify: FastifyInstance) {
     controller.getLoadStatus.bind(controller)
   );
 
-  // Listar cargas recentes
   fastify.get(
     '/etl/historical',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()],
       schema: {
         description: 'Lista as cargas históricas recentes',
         tags: ['ETL', 'Historical'],
@@ -54,11 +53,10 @@ export async function historicalLoadRoutes(fastify: FastifyInstance) {
     controller.listRecentLoads.bind(controller)
   );
 
-  // Cancelar carga
   fastify.delete(
     '/etl/historical/:jobId',
     {
-      preHandler: [fastify.authenticate],
+      preHandler: [authMiddleware.authenticate()],
       schema: {
         description: 'Cancela uma carga histórica em andamento',
         tags: ['ETL', 'Historical'],

@@ -4,9 +4,9 @@ import { logger } from './logger.js';
 export interface ApiResponse<T = any> {
   success: boolean;
   message: string;
-  data?: T;
-  error?: string;
-  errors?: string[];
+  data?: T | undefined;
+  error?: string | undefined;
+  errors?: string[] | undefined;
   meta?: {
     timestamp: string;
     requestId?: string;
@@ -48,16 +48,16 @@ export class ResponseHelper {
     statusCode: number = 200,
     meta?: any
   ): void {
-    const response: ApiResponse<T> = {
-      success: true,
+    const response = {
+      success: true as const,
       message,
-      data,
+      ...(data !== undefined && { data }),
       meta: {
         timestamp: new Date().toISOString(),
         requestId: reply.request.id,
         version: '1.0.0',
-        ...meta
-      }
+        ...meta,
+      },
     };
 
     reply.status(statusCode).send(response);
@@ -87,9 +87,9 @@ export class ResponseHelper {
           page: pagination.page,
           limit: pagination.limit,
           total: pagination.total,
-          totalPages
-        }
-      }
+          totalPages,
+        },
+      },
     };
 
     reply.status(statusCode).send(response);
@@ -113,8 +113,8 @@ export class ResponseHelper {
       meta: {
         timestamp: new Date().toISOString(),
         requestId: reply.request.id,
-        version: '1.0.0'
-      }
+        version: '1.0.0',
+      },
     };
 
     // Log do erro
@@ -125,7 +125,7 @@ export class ResponseHelper {
       errors,
       requestId: reply.request.id,
       url: reply.request.url,
-      method: reply.request.method
+      method: reply.request.method,
     });
 
     reply.status(statusCode).send(response);
@@ -165,10 +165,7 @@ export class ResponseHelper {
   /**
    * Erro de não encontrado
    */
-  public notFoundError(
-    reply: FastifyReply,
-    message: string = 'Recurso não encontrado'
-  ): void {
+  public notFoundError(reply: FastifyReply, message: string = 'Recurso não encontrado'): void {
     this.error(reply, message, 404, 'RESOURCE_NOT_FOUND');
   }
 
@@ -207,7 +204,7 @@ export class ResponseHelper {
       stack: error?.stack,
       requestId: reply.request.id,
       url: reply.request.url,
-      method: reply.request.method
+      method: reply.request.method,
     });
 
     this.error(reply, message, 500, 'INTERNAL_SERVER_ERROR');
@@ -238,10 +235,7 @@ export class ResponseHelper {
   /**
    * Resposta de exclusão bem-sucedida
    */
-  public deleted(
-    reply: FastifyReply,
-    message: string = 'Recurso excluído com sucesso'
-  ): void {
+  public deleted(reply: FastifyReply, message: string = 'Recurso excluído com sucesso'): void {
     this.success(reply, null, message, 200);
   }
 
@@ -295,10 +289,7 @@ export class ResponseHelper {
   /**
    * Resposta de email enviado
    */
-  public emailSent(
-    reply: FastifyReply,
-    message: string = 'Email enviado com sucesso'
-  ): void {
+  public emailSent(reply: FastifyReply, message: string = 'Email enviado com sucesso'): void {
     this.success(reply, null, message, 200);
   }
 
@@ -325,7 +316,12 @@ export class ResponseHelper {
     }
   ): void {
     const statusCode = data.status === 'healthy' ? 200 : 503;
-    this.success(reply, data, `Sistema ${data.status === 'healthy' ? 'saudável' : 'com problemas'}`, statusCode);
+    this.success(
+      reply,
+      data,
+      `Sistema ${data.status === 'healthy' ? 'saudável' : 'com problemas'}`,
+      statusCode
+    );
   }
 
   /**

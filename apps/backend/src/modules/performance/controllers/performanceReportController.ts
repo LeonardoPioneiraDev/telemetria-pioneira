@@ -18,16 +18,12 @@ export class PerformanceReportController {
     this.performanceReportService = new PerformanceReportService();
   }
 
-  public async getPerformanceReport(
-    request: FastifyRequest<{
-      Params: z.infer<typeof performanceReportParamsSchema>;
-      Querystring: z.infer<typeof performanceReportQuerySchema>;
-    }>,
-    reply: FastifyReply
-  ) {
+  public async getPerformanceReport(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { driverId } = request.params;
-      const { reportDate, periodDays } = request.query;
+      const { driverId } = request.params as z.infer<typeof performanceReportParamsSchema>;
+      const { reportDate, periodDays } = request.query as z.infer<
+        typeof performanceReportQuerySchema
+      >;
 
       const report = await this.performanceReportService.generatePerformanceReport(
         driverId,
@@ -44,16 +40,10 @@ export class PerformanceReportController {
     }
   }
 
-  public async getPerformanceReportByDateRange(
-    request: FastifyRequest<{
-      Params: z.infer<typeof performanceReportParamsSchema>;
-      Querystring: z.infer<typeof dateRangeQuerySchema>;
-    }>,
-    reply: FastifyReply
-  ) {
+  public async getPerformanceReportByDateRange(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { driverId } = request.params;
-      const { startDate, endDate } = request.query;
+      const { driverId } = request.params as z.infer<typeof performanceReportParamsSchema>;
+      const { startDate, endDate } = request.query as z.infer<typeof dateRangeQuerySchema>;
 
       const report = await this.performanceReportService.generatePerformanceReportByDateRange(
         driverId,
@@ -68,7 +58,6 @@ export class PerformanceReportController {
           return reply.status(404).send({ message: error.message });
         }
         if (error instanceof InvalidDateRangeError) {
-          // ✅ Captura o erro de intervalo de data
           return reply.status(400).send({ message: error.message });
         }
       }

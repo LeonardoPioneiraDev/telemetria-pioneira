@@ -1,3 +1,4 @@
+//apps/backend/src/modules/etl/controllers/historical-load.controller.ts
 import { HistoricalLoadService } from '@/services/historical-load.service.js';
 import { logger } from '@/shared/utils/logger.js';
 import { FastifyReply, FastifyRequest } from 'fastify';
@@ -23,12 +24,9 @@ export class HistoricalLoadController {
     this.historicalLoadService = new HistoricalLoadService();
   }
 
-  async startLoad(
-    request: FastifyRequest<{ Body: z.infer<typeof startHistoricalLoadSchema> }>,
-    reply: FastifyReply
-  ) {
+  async startLoad(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { startDate, endDate } = request.body;
+      const { startDate, endDate } = request.body as z.infer<typeof startHistoricalLoadSchema>;
 
       logger.info('📥 Requisição de carga histórica', {
         userId: (request.user as any)?.id,
@@ -55,12 +53,9 @@ export class HistoricalLoadController {
     }
   }
 
-  async getLoadStatus(
-    request: FastifyRequest<{ Params: z.infer<typeof jobIdParamSchema> }>,
-    reply: FastifyReply
-  ) {
+  async getLoadStatus(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { jobId } = request.params;
+      const { jobId } = request.params as z.infer<typeof jobIdParamSchema>;
 
       const load = await this.historicalLoadService.getLoadStatus(jobId);
 
@@ -78,12 +73,9 @@ export class HistoricalLoadController {
     }
   }
 
-  async listRecentLoads(
-    request: FastifyRequest<{ Querystring: z.infer<typeof listLoadsQuerySchema> }>,
-    reply: FastifyReply
-  ) {
+  async listRecentLoads(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { limit } = request.query;
+      const { limit } = request.query as z.infer<typeof listLoadsQuerySchema>;
 
       const loads = await this.historicalLoadService.listRecentLoads(limit);
 
@@ -101,12 +93,9 @@ export class HistoricalLoadController {
     }
   }
 
-  async cancelLoad(
-    request: FastifyRequest<{ Params: z.infer<typeof jobIdParamSchema> }>,
-    reply: FastifyReply
-  ) {
+  async cancelLoad(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { jobId } = request.params;
+      const { jobId } = request.params as z.infer<typeof jobIdParamSchema>;
 
       logger.info('🛑 Requisição de cancelamento de carga histórica', {
         userId: (request.user as any)?.id,

@@ -71,13 +71,10 @@ export class PerformanceReportService {
     // Convertemos para bigint para garantir a comparação correta com o banco
     const eventTypeIds = infractionTypes.map(t => BigInt(t.external_id));
 
-    // ✅ Query corrigida para usar JOIN manual e getRawMany()
     const allEventsInWindow = await this.telemetryEventRepository.repository
       .createQueryBuilder('event')
-      // 1. Fazemos o JOIN manual usando os campos de external_id
       .leftJoin(EventType, 'eventType', 'eventType.external_id = event.event_type_external_id')
       .leftJoin(Driver, 'driver', 'driver.external_id = event.driver_external_id')
-      // 2. Selecionamos os campos que precisamos, usando aliases para clareza
       .select([
         'event.event_timestamp AS "event_timestamp"',
         'event.event_type_external_id AS "event_type_external_id"',

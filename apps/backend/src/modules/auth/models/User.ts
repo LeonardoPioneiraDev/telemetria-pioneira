@@ -377,7 +377,7 @@ export class UserModel {
       values.push(limit, offset);
       const usersResult = await database.query(usersQuery, values);
 
-      const users = usersResult.rows.map(row => this.mapRowToUser(row));
+      const users = usersResult.rows.map((row: any) => this.mapRowToUser(row));
       const totalPages = Math.ceil(total / limit);
 
       return {
@@ -490,9 +490,9 @@ export class UserModel {
    * Obter permissões do usuário baseadas no role
    */
   public getUserPermissions(role: UserRole): UserPermission[] {
-    return ROLE_PERMISSIONS[role] || [];
+    const permissions = ROLE_PERMISSIONS[role];
+    return permissions ? [...permissions] : [];
   }
-
   /**
    * Mapear row do banco para objeto User
    */

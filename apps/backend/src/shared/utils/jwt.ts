@@ -37,20 +37,16 @@ export class JWTService {
    */
   public generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
     try {
-      const token = jwt.sign(
-        payload,
-        environment.jwt.secret,
-        {
-          expiresIn: environment.jwt.expiresIn,
-          issuer: 'telemetria-pioneira',
-          audience: 'telemetria-users'
-        }
-      );
+      const token = jwt.sign(payload, environment.jwt.secret, {
+        expiresIn: environment.jwt.expiresIn,
+        issuer: 'telemetria-pioneira',
+        audience: 'telemetria-users',
+      } as jwt.SignOptions);
 
       securityLogger.info('Token de acesso gerado', {
         userId: payload.id,
         email: payload.email,
-        role: payload.role
+        role: payload.role,
       });
 
       return token;
@@ -65,20 +61,16 @@ export class JWTService {
    */
   public generateRefreshToken(payload: Omit<RefreshTokenPayload, 'iat' | 'exp'>): string {
     try {
-      const token = jwt.sign(
-        payload,
-        environment.jwt.refreshSecret,
-        {
-          expiresIn: environment.jwt.refreshExpiresIn,
-          issuer: 'telemetria-pioneira',
-          audience: 'telemetria-refresh'
-        }
-      );
+      const token = jwt.sign(payload, environment.jwt.refreshSecret, {
+        expiresIn: environment.jwt.refreshExpiresIn,
+        issuer: 'telemetria-pioneira',
+        audience: 'telemetria-users',
+      } as jwt.SignOptions);
 
       securityLogger.info('Token de refresh gerado', {
         userId: payload.id,
         email: payload.email,
-        tokenVersion: payload.tokenVersion
+        tokenVersion: payload.tokenVersion,
       });
 
       return token;
@@ -93,14 +85,10 @@ export class JWTService {
    */
   public verifyAccessToken(token: string): JWTPayload {
     try {
-      const decoded = jwt.verify(
-        token,
-        environment.jwt.secret,
-        {
-          issuer: 'telemetria-pioneira',
-          audience: 'telemetria-users'
-        }
-      ) as JWTPayload;
+      const decoded = jwt.verify(token, environment.jwt.secret, {
+        issuer: 'telemetria-pioneira',
+        audience: 'telemetria-users',
+      }) as JWTPayload;
 
       return decoded;
     } catch (error) {
@@ -108,11 +96,11 @@ export class JWTService {
         securityLogger.warn('Token de acesso expirado', { token: token.substring(0, 20) + '...' });
         throw new Error('Token expirado');
       }
-      
+
       if (error instanceof jwt.JsonWebTokenError) {
-        securityLogger.warn('Token de acesso inválido', { 
+        securityLogger.warn('Token de acesso inválido', {
           error: error.message,
-          token: token.substring(0, 20) + '...'
+          token: token.substring(0, 20) + '...',
         });
         throw new Error('Token inválido');
       }
@@ -127,14 +115,10 @@ export class JWTService {
    */
   public verifyRefreshToken(token: string): RefreshTokenPayload {
     try {
-      const decoded = jwt.verify(
-        token,
-        environment.jwt.refreshSecret,
-        {
-          issuer: 'telemetria-pioneira',
-          audience: 'telemetria-refresh'
-        }
-      ) as RefreshTokenPayload;
+      const decoded = jwt.verify(token, environment.jwt.refreshSecret, {
+        issuer: 'telemetria-pioneira',
+        audience: 'telemetria-refresh',
+      }) as RefreshTokenPayload;
 
       return decoded;
     } catch (error) {
@@ -142,11 +126,11 @@ export class JWTService {
         securityLogger.warn('Token de refresh expirado', { token: token.substring(0, 20) + '...' });
         throw new Error('Token de refresh expirado');
       }
-      
+
       if (error instanceof jwt.JsonWebTokenError) {
-        securityLogger.warn('Token de refresh inválido', { 
+        securityLogger.warn('Token de refresh inválido', {
           error: error.message,
-          token: token.substring(0, 20) + '...'
+          token: token.substring(0, 20) + '...',
         });
         throw new Error('Token de refresh inválido');
       }
@@ -197,7 +181,7 @@ export class JWTService {
 
       const currentTime = Math.floor(Date.now() / 1000);
       const timeRemaining = decoded.exp - currentTime;
-      
+
       return Math.max(0, timeRemaining);
     } catch (error) {
       return 0;
@@ -224,19 +208,19 @@ export class JWTService {
       email: user.email,
       username: user.username,
       role: user.role,
-      permissions: user.permissions
+      permissions: user.permissions,
     });
 
     const refreshToken = this.generateRefreshToken({
       id: user.id,
       email: user.email,
-      tokenVersion: user.tokenVersion
+      tokenVersion: user.tokenVersion,
     });
 
     return {
       accessToken,
       refreshToken,
-      expiresIn: environment.jwt.expiresIn
+      expiresIn: environment.jwt.expiresIn,
     };
   }
 }

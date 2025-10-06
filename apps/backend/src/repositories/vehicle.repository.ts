@@ -15,10 +15,10 @@ export class VehicleRepository extends BaseRepository<Vehicle> {
    * Busca todos os IDs externos de veículos existentes no banco.
    * Otimizado para retornar apenas a coluna necessária.
    */
-  async findAllExternalIds(): Promise<{ external_id: number }[]> {
+  async findAllExternalIds(): Promise<{ external_id: bigint }[]> {
     return this.repository.find({
       select: ['external_id'],
-    });
+    }) as any;
   }
   /**
    * Busca entidades por uma lista de IDs externos.

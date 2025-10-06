@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify';
-import { email, z } from 'zod';
-import { USER_PERMISSIONS } from '../../../shared/constants';
-import { authMiddleware } from '../../auth/middleware/authMiddleware';
-import { userController } from '../controllers/userController';
+import { z } from 'zod';
+import { USER_PERMISSIONS } from '../../../shared/constants/index.js';
+import { authMiddleware } from '../../auth/middleware/authMiddleware.js';
+import { userController } from '../controllers/userController.js';
 
 // 1. Defina e exporte o schema para um único usuário.
 export const userSchemaForResponse = z.object({

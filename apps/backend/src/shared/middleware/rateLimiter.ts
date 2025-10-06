@@ -1,5 +1,5 @@
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import rateLimit from '@fastify/rate-limit';
+import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { environment } from '../../config/environment.js';
 import { logger, securityLogger } from '../utils/logger.js';
 import { responseHelper } from '../utils/responseHelper.js';
@@ -34,12 +34,12 @@ export class RateLimiterConfig {
    */
   private generateKey(request: FastifyRequest, prefix: string = 'global'): string {
     const ip = request.ip;
-    const userId = request.user?.id;
-    
+    const userId = (request.user as any)?.id;
+
     if (userId) {
       return `${prefix}:user:${userId}`;
     }
-    
+
     return `${prefix}:ip:${ip}`;
   }
 
@@ -51,7 +51,7 @@ export class RateLimiterConfig {
       max: environment.rateLimit.global.limit,
       timeWindow: environment.rateLimit.global.ttl,
       skipOnError: true,
-      keyGenerator: (request) => this.generateKey(request, 'global'),
+      keyGenerator: request => this.generateKey(request, 'global'),
       errorResponseBuilder: (request, context) => {
         return {
           success: false,
@@ -60,8 +60,8 @@ export class RateLimiterConfig {
           meta: {
             timestamp: new Date().toISOString(),
             requestId: request.id,
-            retryAfter: Math.ceil(context.ttl / 1000)
-          }
+            retryAfter: Math.ceil(context.ttl / 1000),
+          },
         };
       },
       onExceeding: (request, key) => {
@@ -70,7 +70,7 @@ export class RateLimiterConfig {
           ip: request.ip,
           userAgent: request.headers['user-agent'],
           url: request.url,
-          method: request.method
+          method: request.method,
         });
       },
       onExceeded: (request, key) => {
@@ -80,9 +80,9 @@ export class RateLimiterConfig {
           userAgent: request.headers['user-agent'],
           url: request.url,
           method: request.method,
-          userId: request.user?.id
+          userId: (request.user as any)?.id,
         });
-      }
+      },
     };
   }
 
@@ -95,7 +95,7 @@ export class RateLimiterConfig {
       timeWindow: environment.rateLimit.auth.ttl,
       skipOnError: false,
       skipSuccessfulRequests: true, // Não contar logins bem-sucedidos
-      keyGenerator: (request) => this.generateKey(request, 'auth'),
+      keyGenerator: request => this.generateKey(request, 'auth'),
       errorResponseBuilder: (request, context) => {
         return {
           success: false,
@@ -104,8 +104,8 @@ export class RateLimiterConfig {
           meta: {
             timestamp: new Date().toISOString(),
             requestId: request.id,
-            retryAfter: Math.ceil(context.ttl / 1000)
-          }
+            retryAfter: Math.ceil(context.ttl / 1000),
+          },
         };
       },
       onExceeded: (request, key) => {
@@ -113,9 +113,9 @@ export class RateLimiterConfig {
           key,
           ip: request.ip,
           userAgent: request.headers['user-agent'],
-          email: (request.body as any)?.email || 'não informado'
+          email: (request.body as any)?.email || 'não informado',
         });
-      }
+      },
     };
   }
 
@@ -127,9 +127,11 @@ export class RateLimiterConfig {
       max: environment.rateLimit.passwordReset.limit,
       timeWindow: environment.rateLimit.passwordReset.ttl,
       skipOnError: false,
-      keyGenerator: (request) => {
+      keyGenerator: request => {
         const email = (request.body as any)?.email;
-        return email ? `password_reset:email:${email}` : this.generateKey(request, 'password_reset');
+        return email
+          ? `password_reset:email:${email}`
+          : this.generateKey(request, 'password_reset');
       },
       errorResponseBuilder: (request, context) => {
         return {
@@ -139,17 +141,17 @@ export class RateLimiterConfig {
           meta: {
             timestamp: new Date().toISOString(),
             requestId: request.id,
-            retryAfter: Math.ceil(context.ttl / 1000)
-          }
+            retryAfter: Math.ceil(context.ttl / 1000),
+          },
         };
       },
       onExceeded: (request, key) => {
         securityLogger.warn('Rate limit de reset de senha excedido', {
           key,
           ip: request.ip,
-          email: (request.body as any)?.email || 'não informado'
+          email: (request.body as any)?.email || 'não informado',
         });
-      }
+      },
     };
   }
 
@@ -173,16 +175,16 @@ export class RateLimiterConfig {
 
       // Verificar limite atual
       const current = this.rateLimitStore.get(key);
-      
+
       if (current && current.resetTime > now) {
         if (current.count >= options.max) {
           const retryAfter = Math.ceil((current.resetTime - now) / 1000);
-          
+
           securityLogger.warn('Rate limit customizado excedido', {
             key,
             count: current.count,
             max: options.max,
-            retryAfter
+            retryAfter,
           });
 
           return responseHelper.rateLimitError(
@@ -190,14 +192,14 @@ export class RateLimiterConfig {
             options.message || 'Limite de requisições excedido'
           );
         }
-        
+
         // Incrementar contador
         current.count++;
       } else {
         // Criar nova entrada
         this.rateLimitStore.set(key, {
           count: 1,
-          resetTime: now + options.timeWindow
+          resetTime: now + options.timeWindow,
         });
       }
     };
@@ -225,10 +227,10 @@ export class RateLimiterConfig {
 
     try {
       await fastify.register(rateLimit, this.getGlobalRateLimitOptions());
-      
+
       logger.info('✅ Rate limiting global configurado', {
         max: environment.rateLimit.global.limit,
-        timeWindow: `${environment.rateLimit.global.ttl}ms`
+        timeWindow: `${environment.rateLimit.global.ttl}ms`,
       });
     } catch (error) {
       logger.error('❌ Erro ao configurar rate limiting global:', error);
@@ -245,7 +247,7 @@ export class RateLimiterConfig {
       timeWindow: environment.rateLimit.auth.ttl,
       keyPrefix: 'auth',
       message: 'Muitas tentativas de login. Tente novamente mais tarde.',
-      skipSuccessful: true
+      skipSuccessful: true,
     });
   }
 
@@ -257,7 +259,7 @@ export class RateLimiterConfig {
       max: environment.rateLimit.passwordReset.limit,
       timeWindow: environment.rateLimit.passwordReset.ttl,
       keyPrefix: 'password_reset',
-      message: 'Muitas tentativas de recuperação de senha. Tente novamente mais tarde.'
+      message: 'Muitas tentativas de recuperação de senha. Tente novamente mais tarde.',
     });
   }
 
@@ -269,7 +271,7 @@ export class RateLimiterConfig {
       max: 10,
       timeWindow: 60 * 1000, // 1 minuto
       keyPrefix: 'sensitive_api',
-      message: 'Muitas requisições para API sensível. Tente novamente mais tarde.'
+      message: 'Muitas requisições para API sensível. Tente novamente mais tarde.',
     });
   }
 
@@ -290,7 +292,7 @@ export class RateLimiterConfig {
     return {
       totalKeys: this.rateLimitStore.size,
       activeKeys: activeEntries.length,
-      topKeys: activeEntries.slice(0, 10)
+      topKeys: activeEntries.slice(0, 10),
     };
   }
 

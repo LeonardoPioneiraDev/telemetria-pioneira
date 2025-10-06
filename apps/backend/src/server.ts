@@ -16,7 +16,7 @@ async function startServer(): Promise<void> {
     logger.info(`🏠 Host: ${environment.HOST}:${environment.PORT}`);
 
     // Executar migrações se necessário
-    if (environment.NODE_ENV === 'development' || process.env.RUN_MIGRATIONS === 'true') {
+    if (environment.NODE_ENV === 'development' || process.env['RUN_MIGRATIONS'] === 'true') {
       logger.info('🔄 Executando migrações...');
       await migrator.runMigrations();
     }

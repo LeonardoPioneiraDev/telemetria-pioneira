@@ -61,19 +61,32 @@ export class EmailService {
 
       emailLogger.info('Enviando email de boas-vindas', { to, username: data.username });
 
-      const template = this.generateWelcomeTemplate({
+      // ✅ Construir objeto apenas com campos definidos
+      const templateData: {
+        to: string;
+        name: string;
+        username: string;
+        loginUrl: string;
+        firstLoginToken?: string;
+        firstLoginUrl?: string;
+      } = {
         to,
         name: data.name,
         username: data.username,
         loginUrl: data.loginUrl,
-        firstLoginToken: data.firstLoginToken,
-        firstLoginUrl: data.firstLoginToken
-          ? `${environment.frontend.url}/first-login?token=${data.firstLoginToken}`
-          : undefined,
-      });
+      };
 
-      // Assumindo que seu `emailConfig` possui um método genérico `sendEmail`
-      // como visto em outros métodos do seu serviço.
+      // Adicionar campos opcionais apenas se existirem
+      if (data.firstLoginToken) {
+        templateData.firstLoginToken = data.firstLoginToken;
+      }
+
+      if (data.firstLoginToken) {
+        templateData.firstLoginUrl = `${environment.frontend.url}/first-login?token=${data.firstLoginToken}`;
+      }
+
+      const template = this.generateWelcomeTemplate(templateData);
+
       const success = await emailConfig.sendEmail({
         to,
         subject: template.subject,
