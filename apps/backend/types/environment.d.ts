@@ -70,10 +70,10 @@ export interface EmailConfig {
 
 export interface CORSConfig {
   origin: string[];
-  methods: string[];
-  allowedHeaders: string[];
   credentials: boolean;
-  maxAge: number;
+  methods?: string[];
+  allowedHeaders?: string[];
+  maxAge?: number;
 }
 
 export interface RateLimitConfig {

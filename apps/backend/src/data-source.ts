@@ -1,3 +1,4 @@
+//apps/backend/src/data-source.ts
 import 'reflect-metadata';
 import { DataSource } from 'typeorm';
 import { environment } from './config/environment.js';
@@ -12,7 +13,9 @@ import { HistoricalLoadControl } from './entities/historical-load-control.entity
 import { TelemetryEvent } from './entities/telemetry-event.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
 
-// Exportamos a instância do DataSource, mas ainda não inicializada
+// ✅ Detectar se está em produção (código compilado) ou desenvolvimento
+const isCompiled = import.meta.url.includes('/dist/');
+
 export const AppDataSource = new DataSource({
   type: 'postgres',
   host: environment.database.host,
@@ -31,10 +34,10 @@ export const AppDataSource = new DataSource({
     EtlControl,
     HistoricalLoadControl,
   ],
-  migrations: ['src/migrations/**/*.ts'],
+  // ✅ Usar path correto baseado no ambiente
+  migrations: isCompiled ? ['dist/migrations/**/*.js'] : ['src/migrations/**/*.ts'],
 });
 
-// Criamos uma função de inicialização que pode ser chamada por qualquer processo
 export async function initializeDataSource(): Promise<void> {
   if (AppDataSource.isInitialized) {
     logger.debug('DataSource já inicializado.');

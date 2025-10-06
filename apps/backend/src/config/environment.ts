@@ -86,25 +86,10 @@ export const environment: EnvironmentConfig = {
 
   // CORS
   cors: {
-    origin: process.env.CORS_ORIGIN?.split(',') || ['http://localhost:3000'],
-    methods: process.env.CORS_METHODS?.split(',') || [
-      'GET',
-      'HEAD',
-      'PUT',
-      'PATCH',
-      'POST',
-      'DELETE',
-      'OPTIONS',
-    ],
-    allowedHeaders: process.env.CORS_ALLOWED_HEADERS?.split(',') || [
-      'Content-Type',
-      'Authorization',
-      'X-Requested-With',
-      'Accept',
-      'Origin',
-    ],
-    credentials: process.env.CORS_CREDENTIALS === 'true',
-    maxAge: parseInt(process.env.CORS_MAX_AGE || '86400'),
+    origin: process.env.CORS_ORIGIN
+      ? process.env.CORS_ORIGIN.split(',').map(url => url.trim())
+      : ['http://localhost:3000'], // fallback
+    credentials: true,
   },
 
   // Rate Limiting

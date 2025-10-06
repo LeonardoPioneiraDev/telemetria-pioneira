@@ -143,7 +143,6 @@ export class Application {
     await rateLimiter.registerGlobalRateLimit(this.fastify as any);
 
     // Headers de segurança customizados
-    this.fastify.addHook('onSend', corsConfig.addSecurityHeaders());
 
     logger.info('🔧 Middlewares configurados');
   }
