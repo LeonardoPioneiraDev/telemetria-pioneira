@@ -11,6 +11,10 @@ export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
     super(repo);
   }
 
+  public getRepository() {
+    return this.repository;
+  }
+
   async bulkCreate(events: DeepPartial<TelemetryEvent>[]): Promise<void> {
     await this.repository.save(events, { chunk: 200 });
   }

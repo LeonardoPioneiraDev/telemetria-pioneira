@@ -71,7 +71,8 @@ export class PerformanceReportService {
     // Convertemos para bigint para garantir a comparação correta com o banco
     const eventTypeIds = infractionTypes.map(t => BigInt(t.external_id));
 
-    const allEventsInWindow = await this.telemetryEventRepository.repository
+    const allEventsInWindow = await this.telemetryEventRepository
+      .getRepository()
       .createQueryBuilder('event')
       .leftJoin(EventType, 'eventType', 'eventType.external_id = event.event_type_external_id')
       .leftJoin(Driver, 'driver', 'driver.external_id = event.driver_external_id')

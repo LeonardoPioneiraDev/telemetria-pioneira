@@ -90,12 +90,9 @@ export class AuthController {
   /**
    * Registrar novo usuário
    */
-  public async register(
-    request: FastifyRequest<{ Body: RegisterBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async register(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { email, username, fullName, password, acceptTerms } = request.body;
+      const { email, username, fullName, password, acceptTerms } = request.body as RegisterBody;
 
       authLogger.info('Tentativa de registro', { email, username });
 
@@ -147,7 +144,6 @@ export class AuthController {
   public async login(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const { email, password, rememberMe } = request.body as LoginBody;
-
       const ipAddress = request.ip;
 
       authLogger.info('Tentativa de login', { email, ip: ipAddress });
@@ -218,12 +214,9 @@ export class AuthController {
   /**
    * Renovar token de acesso
    */
-  public async refreshToken(
-    request: FastifyRequest<{ Body: RefreshTokenBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async refreshToken(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { refreshToken } = request.body;
+      const { refreshToken } = request.body as RefreshTokenBody;
 
       authLogger.info('Tentativa de renovação de token');
 
@@ -273,12 +266,9 @@ export class AuthController {
   /**
    * Solicitar reset de senha
    */
-  public async requestPasswordReset(
-    request: FastifyRequest<{ Body: PasswordResetRequestBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async requestPasswordReset(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { email } = request.body;
+      const { email } = request.body as PasswordResetRequestBody;
 
       authLogger.info('Solicitação de reset de senha', { email });
 
@@ -308,12 +298,9 @@ export class AuthController {
   /**
    * Resetar senha
    */
-  public async resetPassword(
-    request: FastifyRequest<{ Body: PasswordResetBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async resetPassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { token, newPassword } = request.body;
+      const { token, newPassword } = request.body as PasswordResetBody;
 
       authLogger.info('Tentativa de reset de senha');
 
@@ -363,12 +350,9 @@ export class AuthController {
   /**
    * Alterar senha (usuário logado)
    */
-  public async changePassword(
-    request: FastifyRequest<{ Body: ChangePasswordBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async changePassword(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { currentPassword, newPassword } = request.body;
+      const { currentPassword, newPassword } = request.body as ChangePasswordBody;
       const userId = (request.user as { id: string }).id;
 
       authLogger.info('Tentativa de alteração de senha', { userId });
@@ -477,13 +461,10 @@ export class AuthController {
   /**
    * Atualizar perfil do usuário logado
    */
-  public async updateProfile(
-    request: FastifyRequest<{ Body: UpdateProfileBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async updateProfile(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const userId = (request.user as { id: string }).id;
-      const updateData = request.body;
+      const updateData = request.body as UpdateProfileBody;
 
       authLogger.info('Atualizando perfil', { userId, fields: Object.keys(updateData) });
 
@@ -525,12 +506,9 @@ export class AuthController {
   /**
    * Verificar se email existe
    */
-  public async checkEmail(
-    request: FastifyRequest<{ Querystring: { email: string } }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async checkEmail(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { email } = request.query;
+      const { email } = request.query as { email: string };
 
       const result = await authService.checkEmailExists(email);
 
@@ -551,12 +529,9 @@ export class AuthController {
   /**
    * Verificar se username existe
    */
-  public async checkUsername(
-    request: FastifyRequest<{ Querystring: { username: string } }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async checkUsername(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { username } = request.query;
+      const { username } = request.query as { username: string };
 
       const result = await authService.checkUsernameExists(username);
 
@@ -577,10 +552,7 @@ export class AuthController {
   /**
    * Listar usuários (Admin)
    */
-  public async listUsers(
-    request: FastifyRequest<{ Querystring: ListUsersQuery }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async listUsers(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const {
         page = 1,
@@ -590,7 +562,7 @@ export class AuthController {
         status,
         sortBy = 'createdAt',
         sortOrder = 'desc',
-      } = request.query;
+      } = request.query as ListUsersQuery;
 
       const filters: { search?: string; role?: UserRole; status?: UserStatus } = {};
       if (search) filters.search = search;
@@ -644,12 +616,9 @@ export class AuthController {
   /**
    * Obter usuário por ID (Admin)
    */
-  public async getUserById(
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async getUserById(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       const user = await userModel.findById(id);
 
@@ -661,7 +630,6 @@ export class AuthController {
         });
       }
 
-      // Remover senha
       const { password, ...sanitizedUser } = user;
 
       return reply.status(200).send({
@@ -681,13 +649,10 @@ export class AuthController {
   /**
    * Criar usuário (Admin)
    */
-  public async createUser(
-    request: FastifyRequest<{ Body: CreateUserBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async createUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const adminId = (request.user as { id: string }).id;
-      const userData = request.body;
+      const userData = request.body as CreateUserBody;
 
       authLogger.info('Admin criando usuário', { adminId, email: userData.email });
 
@@ -698,7 +663,7 @@ export class AuthController {
         password: userData.password,
         role: userData.role || USER_ROLES.USER,
         status: userData.status || 'active',
-        sendWelcomeEmail: userData.sendWelcomeEmail ?? true, // Se undefined, usar true
+        sendWelcomeEmail: userData.sendWelcomeEmail ?? true,
       });
 
       const responseData = {
@@ -732,12 +697,9 @@ export class AuthController {
   /**
    * Admin força a redefinição de senha de um usuário.
    */
-  public async resetPasswordByAdmin(
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async resetPasswordByAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { id: targetUserId } = request.params;
+      const { id: targetUserId } = request.params as { id: string };
       const adminId = (request.user as { id: string }).id;
 
       if (targetUserId === adminId) {
@@ -776,13 +738,10 @@ export class AuthController {
   /**
    * Atualizar usuário (Admin)
    */
-  public async updateUser(
-    request: FastifyRequest<{ Params: { id: string }; Body: UpdateUserBody }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async updateUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { id } = request.params;
-      const updateData = request.body;
+      const { id } = request.params as { id: string };
+      const updateData = request.body as UpdateUserBody;
 
       authLogger.info('Admin atualizando usuário', {
         adminId: (request.user as { id: string }).id,
@@ -790,7 +749,6 @@ export class AuthController {
         fields: Object.keys(updateData),
       });
 
-      // Verificar se usuário existe
       const existingUser = await userModel.findById(id);
       if (!existingUser) {
         return reply.status(404).send({
@@ -800,7 +758,6 @@ export class AuthController {
         });
       }
 
-      // Verificar conflitos de email e username
       if (updateData.email) {
         const emailExists = await userModel.emailExists(updateData.email, id);
         if (emailExists) {
@@ -833,7 +790,6 @@ export class AuthController {
         });
       }
 
-      // Remover senha
       const { password, ...sanitizedUser } = updatedUser;
 
       return reply.status(200).send({
@@ -853,19 +809,15 @@ export class AuthController {
   /**
    * Deletar usuário (Admin)
    */
-  public async deleteUser(
-    request: FastifyRequest<{ Params: { id: string } }>,
-    reply: FastifyReply
-  ): Promise<void> {
+  public async deleteUser(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { id } = request.params;
+      const { id } = request.params as { id: string };
 
       authLogger.info('Admin deletando usuário', {
         adminId: (request.user as { id: string }).id,
         targetUserId: id,
       });
 
-      // Não permitir que admin delete a si mesmo
       if (id === (request.user as { id: string }).id) {
         return reply.status(400).send({
           success: false,

@@ -17,34 +17,45 @@ export class ApiRateLimiter {
   private consecutiveErrors: number = 0;
 
   constructor() {
-    const limiterConfig: Bottleneck.ConstructorOptions = {
-      minTime: 3000, // Mínimo 3 segundos entre requisições
-      maxConcurrent: 1, // Apenas 1 requisição por vez
-    };
-
     // Se Redis estiver habilitado, usa para controle distribuído
     if (environment.redis.enabled) {
-      const redisClient = new IORedis({
+      // ✅ Criar configuração do Redis condicionalmente
+      const redisConfig: any = {
         host: environment.redis.host,
         port: environment.redis.port,
-        password: environment.redis.password,
         db: environment.redis.db,
         enableOfflineQueue: false,
-      });
+      };
+
+      // Apenas adicionar password se ela existir
+      if (environment.redis.password) {
+        redisConfig.password = environment.redis.password;
+      }
+
+      const redisClient = new IORedis.default(redisConfig);
 
       const redisConnection = new Bottleneck.IORedisConnection({
         client: redisClient,
       });
 
-      limiterConfig.connection = redisConnection;
-      limiterConfig.id = 'mix-api-rate-limiter';
+      // ✅ Criar limiter com todas as configurações de uma vez
+      this.limiter = new Bottleneck({
+        minTime: 3000,
+        maxConcurrent: 1,
+        connection: redisConnection,
+        id: 'mix-api-rate-limiter',
+      });
 
       logger.info('🔒 Rate Limiter configurado com Redis (modo distribuído)');
     } else {
+      // Modo standalone (sem Redis)
+      this.limiter = new Bottleneck({
+        minTime: 3000,
+        maxConcurrent: 1,
+      });
+
       logger.info('🔒 Rate Limiter configurado em memória (modo standalone)');
     }
-
-    this.limiter = new Bottleneck(limiterConfig);
 
     // Event listeners para monitoramento
     this.limiter.on('failed', async (error, jobInfo) => {
@@ -61,7 +72,6 @@ export class ApiRateLimiter {
       });
     });
   }
-
   /**
    * Aguarda o tempo necessário antes da próxima requisição à API
    *

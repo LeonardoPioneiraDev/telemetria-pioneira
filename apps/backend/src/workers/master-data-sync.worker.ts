@@ -114,11 +114,11 @@ export class MasterDataSyncWorker {
     const existingIds = new Set(existingEventTypes.map(e => String(e.external_id)));
 
     const promises = eventTypesFromApi.map(eventTypeData => {
-      const dataToSave = {
+      const dataToSave: any = {
         external_id: BigInt(eventTypeData.EventTypeId),
         description: eventTypeData.Description,
         event_type_name: eventTypeData.EventType,
-        display_units: eventTypeData.DisplayUnits,
+        display_units: eventTypeData.DisplayUnits || '',
         raw_data: eventTypeData,
       };
 

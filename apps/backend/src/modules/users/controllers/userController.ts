@@ -1,31 +1,25 @@
-// apps/backend/src/modules/users/controllers/userController.ts
-
+//apps/backend/src/modules/users/controllers/userController.ts
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { logger } from '../../../shared/utils/logger.js';
-import { userModel } from '../../auth/models/User.js'; // Reutilizamos o model que funciona
-
-// Interface para os query params, para manter a tipagem forte
-interface ListUsersQuery {
-  page?: number;
-  limit?: number;
-  search?: string;
-  role?: 'admin' | 'user' | 'moderator' | 'viewer';
-  status?: 'active' | 'inactive' | 'suspended' | 'pending';
-  sortBy?: 'createdAt' | 'updatedAt' | 'email' | 'username' | 'fullName';
-  sortOrder?: 'asc' | 'desc';
-}
+import { UserFilters, userModel } from '../../auth/models/User.js';
 
 class UserController {
-  // SUBSTITUA O MÉTODO INTEIRO POR ESTA NOVA VERSÃO DE DEBUG
-  public async list(request: FastifyRequest<{ Querystring: ListUsersQuery }>, reply: FastifyReply) {
+  public async list(request: FastifyRequest, reply: FastifyReply) {
     try {
-      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = request.query;
+      const query = request.query as any;
+      const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc' } = query;
+
+      const filters: UserFilters = {};
+      if (query.search) filters.search = query.search;
+      if (query.role) filters.role = query.role;
+      if (query.status) filters.status = query.status;
+
       const result = await userModel.list({
         page,
         limit,
         sortBy,
         sortOrder,
-        filters: request.query,
+        filters,
       });
 
       const usersDTO = result.users.map(user => ({

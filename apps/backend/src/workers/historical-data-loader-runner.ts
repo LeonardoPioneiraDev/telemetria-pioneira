@@ -127,7 +127,7 @@ async function startWorker() {
           }
         }
 
-        await worker.close(true, 30000);
+        await worker.close(true);
         await masterDataQueue.close();
 
         logger.info('✅ Worker de carga histórica encerrado com sucesso');

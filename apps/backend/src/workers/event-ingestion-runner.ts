@@ -141,8 +141,7 @@ async function startWorker() {
         }
 
         // 3. Fecha o worker
-        await worker.close(true, 10000); // força após 10s
-
+        await worker.close();
         // 4. Fecha fila de master data
         await masterDataQueue.close();
 
