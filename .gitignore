@@ -9,6 +9,7 @@ build/
 
 backups/postgres/
 
+
 # Environment variables
 .env
 .env*.local
@@ -67,3 +68,4 @@ temp/
 
 # TypeScript
 *.tsbuildinfo.env.production
+backups/postgres/
