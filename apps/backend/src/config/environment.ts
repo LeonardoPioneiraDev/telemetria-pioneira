@@ -19,7 +19,7 @@ export const environment: EnvironmentConfig = {
     password: process.env.DATABASE_PASSWORD || 'telemetria123',
     name: process.env.DATABASE_NAME || 'telemetriaPioneira_db',
     schema: process.env.DATABASE_SCHEMA || 'public',
-    synchronize: process.env.DATABASE_SYNCHRONIZE === 'true',
+    synchronize: process.env.DATABASE_SYNCHRONIZE === 'false',
     logging: process.env.DATABASE_LOGGING === 'true',
     ssl: process.env.DATABASE_SSL === 'true',
     maxConnections: parseInt(process.env.DATABASE_MAX_CONNECTIONS || '10'),

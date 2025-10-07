@@ -146,7 +146,6 @@ docker exec "$CONTAINER_NAME" pg_dump \
     --no-acl \
     --clean \
     --if-exists \
-    --verbose \
     > "$BACKUP_FILE" 2>&1 | while IFS= read -r line; do
         if [[ $line == *"ERROR"* ]]; then
             echo -e "${RED}${line}${NC}"

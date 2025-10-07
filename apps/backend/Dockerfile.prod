@@ -31,7 +31,7 @@ COPY turbo.json ./
 COPY apps/backend/package.json ./apps/backend/
 
 # Instalar TODAS as dependências (incluindo devDependencies para build)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --shamefully-hoist
 
 # Copiar código-fonte do backend
 COPY apps/backend ./apps/backend
@@ -40,8 +40,10 @@ COPY apps/backend ./apps/backend
 WORKDIR /build/apps/backend
 RUN pnpm build
 
-# Limpar devDependencies após build
-RUN pnpm install --prod --frozen-lockfile
+# Instalar APENAS produção COM flat node_modules
+WORKDIR /build/apps/backend
+RUN rm -rf node_modules
+RUN pnpm install --prod --frozen-lockfile --shamefully-hoist --no-optional
 
 # ==========================================
 # 🚀 STAGE 2: RUNNER (Produção)
@@ -71,9 +73,8 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 # Configurar diretório de trabalho
 WORKDIR /app
 
-# Copiar node_modules de produção do builder
+# Copiar TODOS os node_modules do workspace (monorepo)
 COPY --from=builder --chown=nodejs:nodejs /build/node_modules ./node_modules
-COPY --from=builder --chown=nodejs:nodejs /build/apps/backend/node_modules ./apps/backend/node_modules
 
 # Copiar código compilado (dist) e arquivos necessários
 COPY --from=builder --chown=nodejs:nodejs /build/apps/backend/dist ./dist

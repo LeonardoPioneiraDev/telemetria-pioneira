@@ -11,6 +11,7 @@ import { EtlControl } from './entities/etl-control.entity.js';
 import { EventType } from './entities/event-type.entity.js';
 import { HistoricalLoadControl } from './entities/historical-load-control.entity.js';
 import { TelemetryEvent } from './entities/telemetry-event.entity.js';
+import { UserEntity } from './entities/user.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
 
 // ✅ Detectar se está em produção (código compilado) ou desenvolvimento
@@ -23,9 +24,10 @@ export const AppDataSource = new DataSource({
   username: environment.database.username,
   password: environment.database.password,
   database: environment.database.name,
-  synchronize: environment.database.synchronize,
+  synchronize: false,
   logging: environment.database.logging,
   entities: [
+    UserEntity,
     Driver,
     Vehicle,
     EventType,

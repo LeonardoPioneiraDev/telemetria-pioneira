@@ -1,31 +1,14 @@
-//apps/backend/src/modules/auth/models/User.ts
-import { database } from '../../../config/database.js';
+// Salve em: apps/backend/src/modules/auth/models/User.ts
+
+import { Brackets, FindOptionsWhere, ILike, Not, Repository } from 'typeorm';
+import { AppDataSource } from '../../../data-source.js';
+import { UserEntity } from '../../../entities/user.entity.js';
 import type { UserPermission, UserRole, UserStatus } from '../../../shared/constants/index.js';
 import { ROLE_PERMISSIONS, USER_ROLES, USER_STATUS } from '../../../shared/constants/index.js';
 import { logger } from '../../../shared/utils/logger.js';
 import { passwordService } from '../../../shared/utils/password.js';
 
-export interface User {
-  id: string;
-  email: string;
-  username: string;
-  fullName: string;
-  password: string;
-  role: UserRole;
-  status: UserStatus;
-  emailVerified: boolean;
-  emailVerifiedAt?: Date;
-  lastLoginAt?: Date;
-  loginAttempts: number;
-  lockedUntil?: Date;
-  passwordResetToken?: string;
-  passwordResetExpires?: Date;
-  emailVerificationToken?: string;
-  emailVerificationExpires?: Date;
-  tokenVersion: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
+export { UserEntity as User };
 
 export interface CreateUserData {
   email: string;
@@ -37,23 +20,8 @@ export interface CreateUserData {
   emailVerified?: boolean;
 }
 
-export interface UpdateUserData {
-  email?: string;
-  username?: string;
-  fullName?: string;
-  password?: string;
-  role?: UserRole;
-  status?: UserStatus;
-  emailVerified?: boolean;
-  lastLoginAt?: Date;
-  loginAttempts?: number;
-  lockedUntil?: Date;
-  passwordResetToken?: string;
-  passwordResetExpires?: Date;
-  emailVerificationToken?: string;
-  emailVerificationExpires?: Date;
-  tokenVersion?: number;
-}
+export interface UpdateUserData
+  extends Partial<Omit<UserEntity, 'id' | 'createdAt' | 'updatedAt'>> {}
 
 export interface UserFilters {
   search?: string;
@@ -65,15 +33,18 @@ export interface UserFilters {
 export interface UserListOptions {
   page: number;
   limit: number;
-  sortBy: string;
+  sortBy: keyof UserEntity;
   sortOrder: 'asc' | 'desc';
   filters?: UserFilters;
 }
 
 export class UserModel {
   private static instance: UserModel;
+  private userRepository: Repository<UserEntity>;
 
-  private constructor() {}
+  private constructor() {
+    this.userRepository = AppDataSource.getRepository(UserEntity);
+  }
 
   public static getInstance(): UserModel {
     if (!UserModel.instance) {
@@ -82,449 +53,165 @@ export class UserModel {
     return UserModel.instance;
   }
 
-  /**
-   * Criar novo usuário
-   */
-  public async create(userData: CreateUserData): Promise<User> {
+  public async create(userData: CreateUserData): Promise<UserEntity> {
     try {
       const hashedPassword = await passwordService.hashPassword(userData.password);
 
-      const columns = [
-        'email',
-        'username',
-        'full_name',
-        'password',
-        'role',
-        'status',
-        'email_verified',
-        'token_version',
-      ];
-      const values: (string | number | boolean | Date)[] = [
-        userData.email,
-        userData.username,
-        userData.fullName,
-        hashedPassword,
-        userData.role || USER_ROLES.USER,
-        userData.status || USER_STATUS.ACTIVE,
-        userData.emailVerified || false,
-        1,
-      ];
-
-      if (userData.emailVerified) {
-        columns.push('email_verified_at');
-        values.push(new Date());
+      // Lógica ajustada para ser mais explícita e agradar o TypeScript
+      const newUser = new UserEntity();
+      newUser.email = userData.email;
+      newUser.username = userData.username;
+      newUser.fullName = userData.fullName;
+      newUser.password = hashedPassword;
+      newUser.role = userData.role || USER_ROLES.USER;
+      newUser.status = userData.status || USER_STATUS.ACTIVE;
+      newUser.emailVerified = userData.emailVerified || false;
+      if (newUser.emailVerified) {
+        newUser.emailVerifiedAt = new Date();
       }
 
-      const placeholders = values.map((_, index) => `$${index + 1}`).join(', ');
-      const query = `
-      INSERT INTO users (${columns.join(', ')})
-      VALUES (${placeholders})
-      RETURNING *
-    `;
-
-      const result = await database.query(query, values);
-      const user = this.mapRowToUser(result.rows[0]);
-
-      logger.info('Usuário criado com sucesso', { userId: user.id, email: user.email });
-      return user;
+      const savedUser = await this.userRepository.save(newUser);
+      logger.info('Usuário criado com sucesso via TypeORM', { userId: savedUser.id });
+      return savedUser;
     } catch (error: any) {
-      logger.error('Erro ao criar usuário:', error.message);
-
-      // ✅ LÓGICA DE TRATAMENTO DE ERRO
+      logger.error('Erro ao criar usuário via TypeORM:', error.message);
       if (error.code === '23505') {
-        // Erro de violação de chave única
-        if (error.constraint.includes('email')) {
-          throw new Error('Este email já está em uso.');
-        }
-        if (error.constraint.includes('username')) {
+        if (error.detail.includes('email')) throw new Error('Este email já está em uso.');
+        if (error.detail.includes('username'))
           throw new Error('Este nome de usuário já está em uso.');
-        }
       }
-
-      if (error.code === '23514') {
-        // Erro de violação de restrição de verificação
-        if (error.constraint === 'check_username_format') {
-          throw new Error('Formato de nome de usuário inválido. Use apenas letras e números.');
-        }
-      }
-
-      // Se não for um erro conhecido, lança o erro original
       throw error;
     }
   }
 
-  /**
-   * Buscar usuário por ID
-   */
-  public async findById(id: string): Promise<User | null> {
-    try {
-      const query = 'SELECT * FROM users WHERE id = $1';
-      const result = await database.query(query, [id]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return this.mapRowToUser(result.rows[0]);
-    } catch (error) {
-      logger.error('Erro ao buscar usuário por ID:', error);
-      throw error;
-    }
+  public async findById(id: string): Promise<UserEntity | null> {
+    return this.userRepository.findOneBy({ id });
   }
 
-  /**
-   * Buscar usuário por email
-   */
-  public async findByEmail(email: string): Promise<User | null> {
-    try {
-      const query = 'SELECT * FROM users WHERE email = $1';
-      const result = await database.query(query, [email.toLowerCase()]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return this.mapRowToUser(result.rows[0]);
-    } catch (error) {
-      logger.error('Erro ao buscar usuário por email:', error);
-      throw error;
-    }
+  public async findByEmail(email: string): Promise<UserEntity | null> {
+    return this.userRepository
+      .createQueryBuilder('user')
+      .addSelect('user.password')
+      .where('user.email = :email', { email: email.toLowerCase() })
+      .getOne();
   }
 
-  /**
-   * Buscar usuário por username
-   */
-  public async findByUsername(username: string): Promise<User | null> {
-    try {
-      const query = 'SELECT * FROM users WHERE username = $1';
-      const result = await database.query(query, [username.toLowerCase()]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return this.mapRowToUser(result.rows[0]);
-    } catch (error) {
-      logger.error('Erro ao buscar usuário por username:', error);
-      throw error;
-    }
+  public async findByUsername(username: string): Promise<UserEntity | null> {
+    return this.userRepository.findOneBy({ username: username.toLowerCase() });
   }
 
-  /**
-   * Buscar usuário por token de reset de senha
-   */
-  public async findByPasswordResetToken(token: string): Promise<User | null> {
-    try {
-      const hashedToken = passwordService.hashResetToken(token);
-      const query = `
-        SELECT * FROM users 
-        WHERE password_reset_token = $1 
-        AND password_reset_expires > NOW()
-      `;
-      const result = await database.query(query, [hashedToken]);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      return this.mapRowToUser(result.rows[0]);
-    } catch (error) {
-      logger.error('Erro ao buscar usuário por token de reset:', error);
-      throw error;
-    }
+  public async findByPasswordResetToken(token: string): Promise<UserEntity | null> {
+    const hashedToken = passwordService.hashResetToken(token);
+    return this.userRepository
+      .createQueryBuilder('user')
+      .where('user.passwordResetToken = :hashedToken', { hashedToken })
+      .andWhere('user.passwordResetExpires > NOW()')
+      .getOne();
   }
 
-  /**
-   * Atualizar usuário
-   */
-  public async update(id: string, updateData: UpdateUserData): Promise<User | null> {
-    try {
-      const fields: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
-
-      // Construir query dinamicamente
-      Object.entries(updateData).forEach(([key, value]) => {
-        if (value !== undefined) {
-          const dbField = this.camelToSnakeCase(key);
-          fields.push(`${dbField} = $${paramIndex}`);
-          values.push(value);
-          paramIndex++;
-        }
-      });
-
-      if (fields.length === 0) {
-        throw new Error('Nenhum campo para atualizar');
-      }
-
-      // Sempre atualizar updated_at
-      fields.push(`updated_at = NOW()`);
-
-      const query = `
-        UPDATE users 
-        SET ${fields.join(', ')}
-        WHERE id = $${paramIndex}
-        RETURNING *
-      `;
-
-      values.push(id);
-
-      const result = await database.query(query, values);
-
-      if (result.rows.length === 0) {
-        return null;
-      }
-
-      const user = this.mapRowToUser(result.rows[0]);
-
-      logger.info('Usuário atualizado com sucesso', {
-        userId: user.id,
-        updatedFields: Object.keys(updateData),
-      });
-
-      return user;
-    } catch (error) {
-      logger.error('Erro ao atualizar usuário:', error);
-      throw error;
+  public async update(id: string, updateData: UpdateUserData): Promise<UserEntity | null> {
+    if (updateData.password) {
+      updateData.password = await passwordService.hashPassword(updateData.password);
     }
+    await this.userRepository.update(id, updateData);
+    logger.info('Usuário atualizado com sucesso via TypeORM', { userId: id });
+    return this.findById(id);
   }
 
-  /**
-   * Deletar usuário
-   */
   public async delete(id: string): Promise<boolean> {
-    try {
-      const query = 'DELETE FROM users WHERE id = $1';
-      const result = await database.query(query, [id]);
-
-      const deleted = result.rowCount > 0;
-
-      if (deleted) {
-        logger.info('Usuário deletado com sucesso', { userId: id });
-      }
-
-      return deleted;
-    } catch (error) {
-      logger.error('Erro ao deletar usuário:', error);
-      throw error;
+    const result = await this.userRepository.delete(id);
+    const deleted = (result.affected ?? 0) > 0;
+    if (deleted) {
+      logger.info('Usuário deletado com sucesso via TypeORM', { userId: id });
     }
+    return deleted;
   }
 
-  /**
-   * Listar usuários com paginação e filtros
-   */
   public async list(options: UserListOptions): Promise<{
-    users: User[];
+    users: UserEntity[];
     total: number;
     page: number;
     limit: number;
     totalPages: number;
   }> {
-    try {
-      const { page, limit, sortBy, sortOrder, filters } = options;
-      const offset = (page - 1) * limit;
+    const { page, limit, sortBy, sortOrder, filters } = options;
+    const skip = (page - 1) * limit;
 
-      // Construir WHERE clause
-      const whereConditions: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
+    const query = this.userRepository.createQueryBuilder('user');
 
-      if (filters?.search) {
-        whereConditions.push(`(
-          full_name ILIKE $${paramIndex} OR 
-          email ILIKE $${paramIndex} OR 
-          username ILIKE $${paramIndex}
-        )`);
-        values.push(`%${filters.search}%`);
-        paramIndex++;
+    if (filters) {
+      if (filters.search) {
+        const searchTerm = `%${filters.search}%`;
+        query.andWhere(
+          new Brackets(qb => {
+            qb.where('user.fullName ILIKE :searchTerm', { searchTerm })
+              .orWhere('user.email ILIKE :searchTerm', { searchTerm })
+              .orWhere('user.username ILIKE :searchTerm', { searchTerm });
+          })
+        );
       }
-
-      if (filters?.role) {
-        whereConditions.push(`role = $${paramIndex}`);
-        values.push(filters.role);
-        paramIndex++;
-      }
-
-      if (filters?.status) {
-        whereConditions.push(`status = $${paramIndex}`);
-        values.push(filters.status);
-        paramIndex++;
-      }
-
-      if (filters?.emailVerified !== undefined) {
-        whereConditions.push(`email_verified = $${paramIndex}`);
-        values.push(filters.emailVerified);
-        paramIndex++;
-      }
-
-      const whereClause =
-        whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : '';
-
-      // Query para contar total
-      const countQuery = `SELECT COUNT(*) FROM users ${whereClause}`;
-      const countResult = await database.query(countQuery, values);
-      const total = parseInt(countResult.rows[0].count);
-
-      // Query para buscar usuários
-      const dbSortBy = this.camelToSnakeCase(sortBy);
-      const usersQuery = `
-        SELECT * FROM users 
-        ${whereClause}
-        ORDER BY ${dbSortBy} ${sortOrder.toUpperCase()}
-        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
-      `;
-
-      values.push(limit, offset);
-      const usersResult = await database.query(usersQuery, values);
-
-      const users = usersResult.rows.map((row: any) => this.mapRowToUser(row));
-      const totalPages = Math.ceil(total / limit);
-
-      return {
-        users,
-        total,
-        page,
-        limit,
-        totalPages,
-      };
-    } catch (error) {
-      logger.error('Erro ao listar usuários:', error);
-      throw error;
+      if (filters.role) query.andWhere('user.role = :role', { role: filters.role });
+      if (filters.status) query.andWhere('user.status = :status', { status: filters.status });
+      if (filters.emailVerified !== undefined)
+        query.andWhere('user.emailVerified = :emailVerified', {
+          emailVerified: filters.emailVerified,
+        });
     }
+
+    query
+      .orderBy(`user.${sortBy}`, sortOrder.toUpperCase() as 'ASC' | 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [users, total] = await query.getManyAndCount();
+    const totalPages = Math.ceil(total / limit);
+
+    return { users, total, page, limit, totalPages };
   }
 
-  /**
-   * Verificar se email já existe
-   */
   public async emailExists(email: string, excludeId?: string): Promise<boolean> {
-    try {
-      let query = 'SELECT id FROM users WHERE email = $1';
-      const values = [email.toLowerCase()];
+    const where: FindOptionsWhere<UserEntity> = { email: ILike(email) };
+    if (excludeId) where.id = Not(excludeId);
 
-      if (excludeId) {
-        query += ' AND id != $2';
-        values.push(excludeId);
-      }
-
-      const result = await database.query(query, values);
-      return result.rows.length > 0;
-    } catch (error) {
-      logger.error('Erro ao verificar se email existe:', error);
-      throw error;
-    }
+    const count = await this.userRepository.count({ where });
+    return count > 0;
   }
 
-  /**
-   * Verificar se username já existe
-   */
   public async usernameExists(username: string, excludeId?: string): Promise<boolean> {
-    try {
-      let query = 'SELECT id FROM users WHERE username = $1';
-      const values = [username.toLowerCase()];
+    const where: FindOptionsWhere<UserEntity> = { username: ILike(username) };
+    if (excludeId) where.id = Not(excludeId);
 
-      if (excludeId) {
-        query += ' AND id != $2';
-        values.push(excludeId);
-      }
-
-      const result = await database.query(query, values);
-      return result.rows.length > 0;
-    } catch (error) {
-      logger.error('Erro ao verificar se username existe:', error);
-      throw error;
-    }
+    const count = await this.userRepository.count({ where });
+    return count > 0;
   }
 
-  /**
-   * Incrementar tentativas de login
-   */
   public async incrementLoginAttempts(id: string): Promise<void> {
-    try {
-      const query = `
-        UPDATE users 
-        SET login_attempts = login_attempts + 1,
-            locked_until = CASE 
-              WHEN login_attempts + 1 >= 5 THEN NOW() + INTERVAL '15 minutes'
-              ELSE locked_until
-            END
-        WHERE id = $1
-      `;
-      await database.query(query, [id]);
-    } catch (error) {
-      logger.error('Erro ao incrementar tentativas de login:', error);
-      throw error;
+    await this.userRepository.increment({ id }, 'loginAttempts', 1);
+
+    const user = await this.findById(id);
+    if (user && user.loginAttempts >= 5) {
+      const lockDuration = 15 * 60 * 1000;
+      await this.userRepository.update(id, {
+        lockedUntil: new Date(Date.now() + lockDuration),
+      });
     }
   }
 
-  /**
-   * Resetar tentativas de login
-   */
   public async resetLoginAttempts(id: string): Promise<void> {
-    try {
-      const query = `
-        UPDATE users 
-        SET login_attempts = 0, locked_until = NULL, last_login_at = NOW()
-        WHERE id = $1
-      `;
-      await database.query(query, [id]);
-    } catch (error) {
-      logger.error('Erro ao resetar tentativas de login:', error);
-      throw error;
-    }
+    await this.userRepository.update(id, {
+      loginAttempts: 0,
+      lockedUntil: null,
+      lastLoginAt: new Date(),
+    });
   }
 
-  /**
-   * Incrementar versão do token (para invalidar tokens existentes)
-   */
   public async incrementTokenVersion(id: string): Promise<void> {
-    try {
-      const query = 'UPDATE users SET token_version = token_version + 1 WHERE id = $1';
-      await database.query(query, [id]);
-    } catch (error) {
-      logger.error('Erro ao incrementar versão do token:', error);
-      throw error;
-    }
+    await this.userRepository.increment({ id }, 'tokenVersion', 1);
   }
 
-  /**
-   * Obter permissões do usuário baseadas no role
-   */
   public getUserPermissions(role: UserRole): UserPermission[] {
     const permissions = ROLE_PERMISSIONS[role];
     return permissions ? [...permissions] : [];
-  }
-  /**
-   * Mapear row do banco para objeto User
-   */
-  private mapRowToUser(row: any): User {
-    return {
-      id: row.id,
-      email: row.email,
-      username: row.username,
-      fullName: row.full_name,
-      password: row.password,
-      role: row.role ? row.role.trim() : row.role,
-      status: row.status,
-      emailVerified: row.email_verified,
-      emailVerifiedAt: row.email_verified_at,
-      lastLoginAt: row.last_login_at,
-      loginAttempts: row.login_attempts,
-      lockedUntil: row.locked_until,
-      passwordResetToken: row.password_reset_token,
-      passwordResetExpires: row.password_reset_expires,
-      emailVerificationToken: row.email_verification_token,
-      emailVerificationExpires: row.email_verification_expires,
-      tokenVersion: row.token_version,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at,
-    };
-  }
-
-  /**
-   * Converter camelCase para snake_case
-   */
-  private camelToSnakeCase(str: string): string {
-    return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
   }
 }
 

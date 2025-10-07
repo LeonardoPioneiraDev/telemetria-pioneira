@@ -14,6 +14,7 @@ import jwt from '@fastify/jwt';
 import swagger from '@fastify/swagger';
 import swaggerUi from '@fastify/swagger-ui';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
+import z from 'zod';
 import { initializeDataSource } from './data-source.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
@@ -237,7 +238,21 @@ export class Application {
    * Registrar rotas
    */
   private async registerRoutes(): Promise<void> {
-    // Rota de saúde
+    // Crie o schema Zod para a resposta
+    const healthResponseSchema = z.object({
+      success: z.boolean(),
+      message: z.string(),
+      data: z.object({
+        status: z.string(),
+        timestamp: z.string(),
+        uptime: z.number(),
+        responseTime: z.string(),
+        // 👇 LINHA CORRIGIDA
+        services: z.record(z.string(), z.any()),
+      }),
+    });
+
+    // Rota de saúde CORRIGIDA
     this.fastify.get(
       '/health',
       {
@@ -245,22 +260,8 @@ export class Application {
           description: 'Verificar saúde da aplicação',
           tags: ['Sistema'],
           response: {
-            200: {
-              type: 'object',
-              properties: {
-                success: { type: 'boolean' },
-                message: { type: 'string' },
-                data: {
-                  type: 'object',
-                  properties: {
-                    status: { type: 'string' },
-                    timestamp: { type: 'string' },
-                    uptime: { type: 'number' },
-                    services: { type: 'object' },
-                  },
-                },
-              },
-            },
+            200: healthResponseSchema,
+            503: healthResponseSchema,
           },
         },
       },

@@ -5,6 +5,7 @@ import { USER_ROLES } from '../../../shared/constants/index.js';
 import { authLogger, logger } from '../../../shared/utils/logger.js';
 import { userModel } from '../models/User.js';
 import { authService } from '../services/authService.js';
+import { UserEntity } from '@/entities/user.entity.js';
 
 export interface RegisterBody {
   email: string;
@@ -560,9 +561,29 @@ export class AuthController {
         search,
         role,
         status,
-        sortBy = 'createdAt',
+        sortBy: rawSortBy = 'createdAt', // Renomeamos para rawSortBy
         sortOrder = 'desc',
       } = request.query as ListUsersQuery;
+
+      // 👇 INÍCIO DA CORREÇÃO
+      // 1. Criamos uma lista de campos permitidos para ordenação
+      const allowedSortByFields: (keyof UserEntity)[] = [
+        'id',
+        'email',
+        'username',
+        'fullName',
+        'role',
+        'status',
+        'createdAt',
+        'updatedAt',
+        'lastLoginAt',
+      ];
+
+      // 2. Validamos o campo recebido. Se for inválido, usamos um padrão seguro.
+      let sortBy: keyof UserEntity = 'createdAt';
+      if (allowedSortByFields.includes(rawSortBy as keyof UserEntity)) {
+        sortBy = rawSortBy as keyof UserEntity;
+      }
 
       const filters: { search?: string; role?: UserRole; status?: UserStatus } = {};
       if (search) filters.search = search;
