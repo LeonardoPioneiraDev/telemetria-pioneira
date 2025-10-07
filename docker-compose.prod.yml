@@ -1,0 +1,261 @@
+# ==========================================
+# 🐳 DOCKER COMPOSE - PRODUÇÃO
+# ==========================================
+# Telemetria Pioneira - Ambiente de Produção
+# Servidor Ubuntu - Portas sem conflito
+
+version: '3.8'
+
+services:
+  # ==========================================
+  # 🗄️ POSTGRESQL - BANCO DE DADOS
+  # ==========================================
+  telemetria-postgres:
+    image: postgres:15-alpine
+    container_name: telemetria-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USERNAME}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_INITDB_ARGS: '--encoding=UTF-8 --locale=C'
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - '5437:5432' # Externa:Interna (5437 para evitar conflito)
+    volumes:
+      - telemetria-postgres-data:/var/lib/postgresql/data
+      # Backup automático (opcional)
+      - ./backups/postgres:/backups
+    networks:
+      - telemetria-network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${DATABASE_USERNAME} -d ${DATABASE_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # ==========================================
+  # 🔴 REDIS - CACHE E FILAS
+  # ==========================================
+  telemetria-redis:
+    image: redis:7-alpine
+    container_name: telemetria-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-""}
+    ports:
+      - '6381:6379' # Externa:Interna (6381 para evitar conflito)
+    volumes:
+      - telemetria-redis-data:/data
+    networks:
+      - telemetria-network
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '5m'
+        max-file: '3'
+
+  # ==========================================
+  # 🚀 BACKEND API
+  # ==========================================
+  telemetria-backend:
+    image: felipebatista54/telemetria-backend:latest
+    container_name: telemetria-backend
+    restart: unless-stopped
+    depends_on:
+      telemetria-postgres:
+        condition: service_healthy
+      telemetria-redis:
+        condition: service_healthy
+    environment:
+      # Ambiente
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3333
+
+      # Database - USA NOME DO SERVICE
+      DATABASE_HOST: telemetria-postgres
+      DATABASE_PORT: 5432 # Porta INTERNA
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_SCHEMA: public
+      DATABASE_SSL: false
+      DATABASE_LOGGING: false
+      DATABASE_SYNCHRONIZE: false
+
+      # Redis - USA NOME DO SERVICE
+      REDIS_ENABLED: true
+      REDIS_HOST: telemetria-redis
+      REDIS_PORT: 6379 # Porta INTERNA
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-""}
+      REDIS_DB: 0
+
+      # JWT - USA SECRETS DO .env.production
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-24h}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+
+      # Email
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-true}
+      EMAIL_DEBUG: false
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_TLS: ${SMTP_TLS:-true}
+      EMAIL_FROM_NAME: ${EMAIL_FROM_NAME}
+      EMAIL_FROM_ADDRESS: ${EMAIL_FROM_ADDRESS}
+
+      # Admin
+      AUTO_CREATE_ADMIN: ${AUTO_CREATE_ADMIN:-false}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_FULL_NAME: ${ADMIN_FULL_NAME}
+
+      # Configurações
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-false}
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_TO_CONSOLE: true
+      LOG_TO_FILE: true
+
+      # CORS - PRODUÇÃO
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      CORS_CREDENTIALS: true
+
+      # Helmet
+      HELMET_ENABLED: true
+      HELMET_CSP_ENABLED: false
+      HELMET_CROSS_ORIGIN_EMBEDDER_POLICY: false
+
+      # Mix Telematics
+      MIX_USERNAME: ${MIX_USERNAME}
+      MIX_PASSWORD: ${MIX_PASSWORD}
+      MIX_BASIC_AUTH_TOKEN: ${MIX_BASIC_AUTH_TOKEN}
+      MIX_SCOPE: ${MIX_SCOPE}
+
+    ports:
+      - '3007:3333' # Externa:Interna
+    volumes:
+      - telemetria-backend-logs:/app/logs
+    networks:
+      - telemetria-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3333/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+  # ==========================================
+  # ⚙️ WORKER - EVENT INGESTION
+  # ==========================================
+  telemetria-worker-events:
+    image: felipebatista54/telemetria-backend:latest
+    container_name: telemetria-worker-events
+    restart: unless-stopped
+    depends_on:
+      telemetria-postgres:
+        condition: service_healthy
+      telemetria-redis:
+        condition: service_healthy
+      telemetria-backend:
+        condition: service_healthy
+    # IMPORTANTE: Sobrescreve o comando padrão
+    command: ['node', 'dist/workers/event-ingestion-runner.js']
+    environment:
+      # Mesmas variáveis do backend
+      NODE_ENV: production
+
+      # Database
+      DATABASE_HOST: telemetria-postgres
+      DATABASE_PORT: 5432
+      DATABASE_USERNAME: ${DATABASE_USERNAME}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      DATABASE_SCHEMA: public
+      DATABASE_SSL: false
+      DATABASE_LOGGING: false
+
+      # Redis
+      REDIS_ENABLED: true
+      REDIS_HOST: telemetria-redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-""}
+      REDIS_DB: 0
+
+      # Logs
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      LOG_TO_CONSOLE: true
+      LOG_TO_FILE: true
+
+      # Mix Telematics
+      MIX_USERNAME: ${MIX_USERNAME}
+      MIX_PASSWORD: ${MIX_PASSWORD}
+      MIX_BASIC_AUTH_TOKEN: ${MIX_BASIC_AUTH_TOKEN}
+      MIX_SCOPE: ${MIX_SCOPE}
+
+    volumes:
+      - telemetria-worker-logs:/app/logs
+    networks:
+      - telemetria-network
+    # Health check customizado para worker
+    healthcheck:
+      test: ['CMD', 'pgrep', '-f', 'event-ingestion-runner']
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '20m'
+        max-file: '5'
+
+# ==========================================
+# 📦 VOLUMES PERSISTENTES
+# ==========================================
+volumes:
+  telemetria-postgres-data:
+    driver: local
+    name: telemetria-postgres-data
+
+  telemetria-redis-data:
+    driver: local
+    name: telemetria-redis-data
+
+  telemetria-backend-logs:
+    driver: local
+    name: telemetria-backend-logs
+
+  telemetria-worker-logs:
+    driver: local
+    name: telemetria-worker-logs
+
+# ==========================================
+# 🌐 NETWORK ISOLADA
+# ==========================================
+networks:
+  telemetria-network:
+    driver: bridge
+    name: telemetria-network
