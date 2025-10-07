@@ -141,14 +141,21 @@ fi
 # Copiar template
 cp .env.production.example "$ENV_FILE"
 
-# Substituir placeholders com secrets gerados
-sed -i.bak "s|<GERAR_JWT_SECRET>|$JWT_SECRET|g" "$ENV_FILE"
-sed -i.bak "s|<GERAR_JWT_REFRESH_SECRET>|$JWT_REFRESH_SECRET|g" "$ENV_FILE"
-sed -i.bak "s|<GERAR_DB_PASSWORD>|$DATABASE_PASSWORD|g" "$ENV_FILE"
-sed -i.bak "s|<GERAR_REDIS_PASSWORD>|$REDIS_PASSWORD|g" "$ENV_FILE"
-sed -i.bak "s|<CONFIGURAR_SENHA_ADMIN_SEGURA>|$ADMIN_PASSWORD|g" "$ENV_FILE"
+# Exportar variáveis para perl
+export JWT_SECRET
+export JWT_REFRESH_SECRET
+export DATABASE_PASSWORD
+export REDIS_PASSWORD
+export ADMIN_PASSWORD
 
-# Remover arquivo backup do sed
+# Substituir placeholders usando perl (compatível macOS/Linux)
+perl -i.bak -pe 's|<GERAR_JWT_SECRET>|$ENV{JWT_SECRET}|g' "$ENV_FILE"
+perl -i.bak -pe 's|<GERAR_JWT_REFRESH_SECRET>|$ENV{JWT_REFRESH_SECRET}|g' "$ENV_FILE"
+perl -i.bak -pe 's|<GERAR_DB_PASSWORD>|$ENV{DATABASE_PASSWORD}|g' "$ENV_FILE"
+perl -i.bak -pe 's|<GERAR_REDIS_PASSWORD>|$ENV{REDIS_PASSWORD}|g' "$ENV_FILE"
+perl -i.bak -pe 's|<CONFIGURAR_SENHA_ADMIN_SEGURA>|$ENV{ADMIN_PASSWORD}|g' "$ENV_FILE"
+
+# Remover arquivo backup do perl
 rm -f "${ENV_FILE}.bak"
 
 print_success "Arquivo $ENV_FILE criado com sucesso!"

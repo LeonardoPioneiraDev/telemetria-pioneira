@@ -38,10 +38,14 @@ export function EventsChart({ data, type, isLoading }: EventsChartProps) {
       </Card>
     );
   }
-
   const formattedData = data.map(item => {
-    const key = 'hour' in item ? 'hour' : 'date';
-    const dateStr = item[key];
+    let dateStr: string;
+
+    if (type === 'hourly') {
+      dateStr = (item as HourlyMetric).hour;
+    } else {
+      dateStr = (item as DailyMetric).date;
+    }
 
     let label: string;
     if (type === 'hourly') {

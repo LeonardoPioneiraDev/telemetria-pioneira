@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/services/etl.service.ts
 
 import { api } from '@/lib/api';

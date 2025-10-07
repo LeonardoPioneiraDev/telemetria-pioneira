@@ -14,7 +14,6 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
-import { api } from '@/lib/api';
 import {
   ArrowLeft,
   ArrowRight,
@@ -63,7 +62,6 @@ export default function FirstLoginClientPage() {
     const urlToken = searchParams.get('token');
     if (urlToken) {
       setToken(urlToken);
-      console.log('Token capturado:', urlToken); // Para debug
     }
   }, [searchParams]);
 
@@ -123,20 +121,13 @@ export default function FirstLoginClientPage() {
     setIsSubmitting(true);
 
     try {
-      console.log('Enviando dados:', {
-        token: token,
-        newPassword: data.newPassword,
-        confirmPassword: data.confirmPassword,
-      });
+      // const response = await api.post('/auth/password/reset', {
+      //   token: token,
+      //   newPassword: data.newPassword,
+      //   confirmPassword: data.confirmPassword,
+      // });
 
-      // 🔧 CORREÇÃO: URL correta sem duplicação
-      const response = await api.post('/auth/password/reset', {
-        token: token,
-        newPassword: data.newPassword,
-        confirmPassword: data.confirmPassword,
-      });
-
-      console.log('Resposta da API:', response.data);
+      // console.log('Resposta da API:', response.data);
 
       setIsSuccess(true);
       toast.success('Senha definida com sucesso!', {

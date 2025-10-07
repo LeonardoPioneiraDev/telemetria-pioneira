@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // src/types/etl.ts
 
 export type ETLStatusType = 'running' | 'idle' | 'error' | 'circuit_breaker_open' | 'unknown';

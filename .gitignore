@@ -64,4 +64,4 @@ temp/
 .jest/
 
 # TypeScript
-*.tsbuildinfo
+*.tsbuildinfo.env.production

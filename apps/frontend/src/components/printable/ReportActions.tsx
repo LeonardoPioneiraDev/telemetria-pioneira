@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 //apps/frontend/src/components/printable/ReportActions.tsx
 'use client';
 import { LOGO_BASE64 } from '@/assets/images/logoBase64';
@@ -10,8 +11,8 @@ interface ReportActionsProps {
   driverInfo: DriverInfo;
   reportDetails: ReportDetails;
   performanceSummary: PerformanceSummary;
-  refetch: () => void;
-  isFetching: boolean;
+  refetch?: () => void;
+  isFetching?: boolean;
 }
 
 export const ReportActions = ({
@@ -767,7 +768,7 @@ export const ReportActions = ({
         </Button> */}
 
         {/* 2. Crie o botão que chama a função 'refetch' */}
-        <Button onClick={() => refetch()} disabled={isFetching}>
+        <Button onClick={() => refetch!()} disabled={isFetching}>
           {isFetching ? 'Atualizando...' : 'Atualizar Relatório'}
         </Button>
       </div>

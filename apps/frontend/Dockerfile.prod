@@ -1,0 +1,121 @@
+# ==========================================
+# 🏗️ STAGE 1: DEPS - INSTALAÇÃO DE DEPENDÊNCIAS
+# ==========================================
+FROM node:18-alpine AS deps
+
+# Metadados
+LABEL maintainer="Felipe Batista <felipe@vpioneira.com.br>"
+LABEL description="Telemetria Pioneira - Frontend Dependencies"
+
+# Instalar dependências do sistema para build
+RUN apk add --no-cache libc6-compat python3 make g++
+
+# Instalar pnpm
+RUN npm install -g pnpm@8.15.0
+
+WORKDIR /app
+
+# Copiar arquivos de dependências do monorepo
+COPY pnpm-workspace.yaml ./
+COPY pnpm-lock.yaml ./
+COPY package.json ./
+
+# Copiar package.json do frontend
+COPY apps/frontend/package.json ./apps/frontend/
+
+# Instalar dependências
+RUN pnpm install --frozen-lockfile
+
+# ==========================================
+# 🏗️ STAGE 2: BUILDER - BUILD DA APLICAÇÃO
+# ==========================================
+FROM node:18-alpine AS builder
+
+# Metadados
+LABEL maintainer="Felipe Batista <felipe@vpioneira.com.br>"
+LABEL description="Telemetria Pioneira - Frontend Builder"
+
+# Instalar pnpm
+RUN npm install -g pnpm@8.15.0
+
+WORKDIR /app
+
+# Copiar node_modules do stage anterior
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/apps/frontend/node_modules ./apps/frontend/node_modules
+
+# Copiar código-fonte
+COPY apps/frontend ./apps/frontend
+COPY pnpm-workspace.yaml ./
+COPY package.json ./
+
+# Build arguments (variáveis de ambiente em build time)
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_APP_NAME
+ARG NEXT_PUBLIC_APP_VERSION
+
+# Setar variáveis de ambiente para build
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_APP_NAME=$NEXT_PUBLIC_APP_NAME
+ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
+
+# Build do Next.js (modo standalone - SEM turbopack no Docker)
+WORKDIR /app/apps/frontend
+RUN NODE_ENV=production pnpm exec next build
+
+# ==========================================
+# 🚀 STAGE 3: RUNNER - PRODUÇÃO
+# ==========================================
+FROM node:18-alpine AS runner
+
+# Metadados
+LABEL maintainer="Felipe Batista <felipe@vpioneira.com.br>"
+LABEL description="Telemetria Pioneira - Frontend Production"
+LABEL version="1.0.0"
+
+# Instalar apenas dependências de runtime
+RUN apk add --no-cache \
+    curl \
+    ca-certificates \
+    tzdata \
+    tini
+
+# Criar usuário não-root
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nextjs -u 1001
+
+# Configurar timezone (Brasília)
+ENV TZ=America/Sao_Paulo
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+WORKDIR /app
+
+# Variáveis de ambiente para produção
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+# Copiar arquivos necessários do builder
+# Standalone output - apenas o necessário para rodar
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/.next/static ./apps/frontend/.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/apps/frontend/public ./apps/frontend/public
+
+# Mudar para usuário não-root
+USER nextjs
+
+# Expor porta
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# Usar tini para gerenciamento de sinais
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Iniciar aplicação
+CMD ["node", "apps/frontend/server.js"]

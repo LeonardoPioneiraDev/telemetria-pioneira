@@ -40,21 +40,14 @@ const extractStartDate = (period: PerformancePeriod): Date => {
 };
 
 export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) => {
-  // DEBUG: Vamos ver os dados que estão chegando
-  console.log('🔍 DEBUG - Periods:', periods);
-  console.log('🔍 DEBUG - Metrics:', metrics);
-
   // FILTRAR PERÍODOS QUE TÊM PELO MENOS UMA OCORRÊNCIA
   const periodsWithData = periods.filter(period => {
     const hasData = metrics.some(metric => {
       const count = metric.counts[period.id];
       const hasOccurrence = count !== undefined && count !== null && count > 0;
-      console.log(
-        `🔍 Period ${period.id} (${period.label}) - Count: ${count}, HasOccurrence: ${hasOccurrence}`
-      );
+
       return hasOccurrence;
     });
-    console.log(`🔍 Period ${period.id} final result: ${hasData}`);
     return hasData;
   });
 
@@ -65,26 +58,15 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
     return dateA.getTime() - dateB.getTime();
   });
 
-  console.log(
-    '🔍 DEBUG - Sorted periods:',
-    sortedPeriodsWithData.map(p => p.label)
-  );
-
   // FILTRAR MÉTRICAS QUE TÊM PELO MENOS UMA OCORRÊNCIA
   const metricsWithData = metrics.filter(metric => {
     const hasData = Object.entries(metric.counts).some(([periodId, count]) => {
       const hasOccurrence = count !== undefined && count !== null && count > 0;
-      console.log(
-        `🔍 Metric "${metric.eventType}" - Period ${periodId}: ${count}, HasOccurrence: ${hasOccurrence}`
-      );
+
       return hasOccurrence;
     });
-    console.log(`🔍 Metric "${metric.eventType}" final result: ${hasData}`);
     return hasData;
   });
-
-  console.log('🔍 DEBUG - Periods with data:', sortedPeriodsWithData);
-  console.log('🔍 DEBUG - Metrics with data:', metricsWithData);
 
   // Calcular total de eventos por métrica (apenas métricas com dados)
   const metricsWithTotals = metricsWithData.map(metric => {
@@ -92,13 +74,11 @@ export const PerformanceTable = ({ periods, metrics }: PerformanceTableProps) =>
       const count = metric.counts[period.id] ?? 0;
       return sum + count;
     }, 0);
-    console.log(`🔍 Metric "${metric.eventType}" total: ${total}`);
     return { ...metric, total };
   });
 
   // Se não há dados, mostrar mensagem
   if (sortedPeriodsWithData.length === 0 || metricsWithData.length === 0) {
-    console.log('🔍 No data found, showing empty state');
     return (
       <Card>
         <CardHeader>

@@ -252,6 +252,43 @@ volumes:
     driver: local
     name: telemetria-worker-logs
 
+  # ==========================================
+  # 🎨 FRONTEND WEB
+  # ==========================================
+  telemetria-frontend:
+    image: felipebatista54/telemetria-frontend:latest
+    container_name: telemetria-frontend
+    restart: unless-stopped
+    depends_on:
+      telemetria-backend:
+        condition: service_healthy
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile.prod
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_APP_NAME: ${NEXT_PUBLIC_APP_NAME:-Telemetria Pioneira}
+        NEXT_PUBLIC_APP_VERSION: ${NEXT_PUBLIC_APP_VERSION:-1.0.0}
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOSTNAME: 0.0.0.0
+    ports:
+      - '3006:3000' # Externa:Interna
+    networks:
+      - telemetria-network
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
 # ==========================================
 # 🌐 NETWORK ISOLADA
 # ==========================================

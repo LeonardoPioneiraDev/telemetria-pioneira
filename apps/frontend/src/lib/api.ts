@@ -3,7 +3,7 @@
 import axios from 'axios';
 
 // A URL base da sua API. No futuro, moveremos isso para variáveis de ambiente (.env).
-const API_BASE_URL = 'http://localhost:3333/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
