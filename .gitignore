@@ -7,9 +7,6 @@ dist/
 build/
 .next/
 
-backups/postgres/
-
-
 # Environment variables
 .env
 .env*.local
