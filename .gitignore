@@ -7,7 +7,7 @@ dist/
 build/
 .next/
 
-backups/postgres
+backups/postgres/
 
 # Environment variables
 .env
