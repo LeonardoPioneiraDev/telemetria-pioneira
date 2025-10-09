@@ -116,6 +116,7 @@ export class PerformanceReportService {
         badge: driver.employee_number || null,
       },
       reportDetails: {
+        reportDate: reportDetailsReferenceDate.toISOString(),
         reportDateFormatted: this.formatReportDate(reportDetailsReferenceDate),
         periodSummary: this._generatePeriodSummary(groupedPeriods),
         acknowledgmentText:
@@ -143,7 +144,7 @@ export class PerformanceReportService {
     let effectiveReferenceDate: Date;
     if (reportDate) {
       const [year, month, day] = reportDate.split('-').map(Number);
-      effectiveReferenceDate = new Date(Date.UTC(year!, month! - 1, day));
+      effectiveReferenceDate = new Date(Date.UTC(year!, month! - 1, day, 12));
     } else {
       const now = new Date();
       effectiveReferenceDate = new Date(
@@ -174,9 +175,8 @@ export class PerformanceReportService {
     _startDateString: string, // Parâmetro ignorado
     endDateString: string
   ) {
-    // AJUSTE: A data de referência é o `endDateString`. `startDateString` é ignorado.
     const [endYear, endMonth, endDay] = endDateString.split('-').map(Number);
-    const reportDetailsReferenceDate = new Date(Date.UTC(endYear!, endMonth! - 1, endDay));
+    const reportDetailsReferenceDate = new Date(Date.UTC(endYear!, endMonth! - 1, endDay, 12));
 
     if (isNaN(reportDetailsReferenceDate.getTime())) {
       throw new InvalidDateRangeError('Data final inválida.');
@@ -328,6 +328,7 @@ export class PerformanceReportService {
         badge: driver.employee_number || null,
       },
       reportDetails: {
+        reportDate: referenceDate.toISOString(),
         reportDateFormatted: this.formatReportDate(referenceDate),
         periodSummary: 'Nenhum evento de infração encontrado no período.',
         acknowledgmentText:

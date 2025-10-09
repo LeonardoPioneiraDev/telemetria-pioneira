@@ -1,5 +1,5 @@
 # ==========================================
-# 🐳 DOCKER COMPOSE - PRODUÇÃO
+#  DOCKER COMPOSE - PRODUÇÃO
 # ==========================================
 # Telemetria Pioneira - Ambiente de Produção
 
@@ -7,7 +7,7 @@ version: '3.8'
 
 services:
   # ==========================================
-  # 🗄️ POSTGRESQL
+  # ️ POSTGRESQL
   # ==========================================
   telemetria-postgres:
     image: postgres:15-alpine
@@ -39,7 +39,7 @@ services:
         max-file: '3'
 
   # ==========================================
-  # 🔴 REDIS
+  #  REDIS
   # ==========================================
   telemetria-redis:
     image: redis:7-alpine
@@ -65,7 +65,7 @@ services:
         max-file: '3'
 
   # ==========================================
-  # 🚀 BACKEND API
+  #  BACKEND API
   # ==========================================
   telemetria-backend:
     image: felipebatista54/telemetria-backend:latest
@@ -76,7 +76,7 @@ services:
         condition: service_healthy
       telemetria-redis:
         condition: service_healthy
-    environment:
+    environment: &backend-environment
       NODE_ENV: production
       HOST: 0.0.0.0
       PORT: 3333
@@ -127,6 +127,7 @@ services:
       MIX_PASSWORD: ${MIX_PASSWORD}
       MIX_BASIC_AUTH_TOKEN: ${MIX_BASIC_AUTH_TOKEN}
       MIX_SCOPE: ${MIX_SCOPE}
+
     ports:
       - '3007:3333'
     volumes:
@@ -161,27 +162,7 @@ services:
         condition: service_healthy
     command: ['node', 'dist/workers/event-ingestion-runner.js']
     environment:
-      NODE_ENV: production
-      DATABASE_HOST: telemetria-postgres
-      DATABASE_PORT: 5432
-      DATABASE_USERNAME: ${DATABASE_USERNAME}
-      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
-      DATABASE_NAME: ${DATABASE_NAME}
-      DATABASE_SCHEMA: public
-      DATABASE_SSL: false
-      DATABASE_LOGGING: false
-      REDIS_ENABLED: true
-      REDIS_HOST: telemetria-redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-""}
-      REDIS_DB: 0
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-      LOG_TO_CONSOLE: true
-      LOG_TO_FILE: true
-      MIX_USERNAME: ${MIX_USERNAME}
-      MIX_PASSWORD: ${MIX_PASSWORD}
-      MIX_BASIC_AUTH_TOKEN: ${MIX_BASIC_AUTH_TOKEN}
-      MIX_SCOPE: ${MIX_SCOPE}
+      <<: *backend-environment
     volumes:
       - telemetria-worker-logs:/app/logs
     networks:
@@ -199,7 +180,7 @@ services:
         max-file: '5'
 
   # ==========================================
-  # 🎨 FRONTEND
+  #  FRONTEND
   # ==========================================
   telemetria-frontend:
     image: felipebatista54/telemetria-frontend:latest
@@ -229,7 +210,7 @@ services:
         max-file: '3'
 
 # ==========================================
-# 📦 VOLUMES
+#  VOLUMES
 # ==========================================
 volumes:
   telemetria-postgres-data:
@@ -246,7 +227,7 @@ volumes:
     name: telemetria-worker-logs
 
 # ==========================================
-# 🌐 NETWORK
+#  NETWORK
 # ==========================================
 networks:
   telemetria-network:

@@ -1,12 +1,16 @@
 import { environment } from '@/config/environment.js';
 import { logger } from '@/shared/utils/logger.js';
-import { Queue } from 'bullmq';
+import { ConnectionOptions, Queue } from 'bullmq';
 import 'dotenv/config';
 
-const connection = {
+const connection: ConnectionOptions = {
   host: environment.redis.host,
   port: environment.redis.port,
 };
+
+if (environment.redis.password) {
+  connection.password = environment.redis.password;
+}
 
 // Fila para sincronização de dados de apoio (baixa frequência)
 export const masterDataSyncQueue = new Queue('master-data-sync', {

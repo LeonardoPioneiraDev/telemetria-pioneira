@@ -25,6 +25,7 @@ export const performanceReportResponseSchema = z.object({
     badge: z.string().nullable(),
   }),
   reportDetails: z.object({
+    reportDate: z.string().datetime(),
     reportDateFormatted: z.string(),
     periodSummary: z.string(),
     acknowledgmentText: z.string(),

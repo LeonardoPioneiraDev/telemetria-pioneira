@@ -2,6 +2,9 @@
 'use client';
 import { DriverInfo, ReportDetails } from '@/types/api';
 
+// 1. Importe a função que criamos
+import { formatDateToBrazil } from '@/utils/formatDate';
+
 interface ReportHeaderProps {
   driverInfo: DriverInfo;
   reportDetails: ReportDetails;
@@ -31,7 +34,11 @@ export const ReportHeader = ({ driverInfo, reportDetails }: ReportHeaderProps) =
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
       <div>
         <span className="font-medium text-gray-700">Data do Relatório:</span>
-        <span className="ml-2 text-gray-600">{reportDetails.reportDateFormatted}</span>
+        {/* 2. Use a função aqui, passando a data original.
+             Estou supondo que a data original está em 'reportDetails.reportDate'.
+             Se o nome do campo for outro, é só ajustar.
+        */}
+        <span className="ml-2 text-gray-600">{formatDateToBrazil(reportDetails.reportDate)}</span>
       </div>
       <div>
         <span className="font-medium text-gray-700">Período Analisado:</span>

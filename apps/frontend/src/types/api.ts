@@ -47,6 +47,7 @@ export interface DriverInfo {
  * Representa os detalhes textuais do relatório.
  */
 export interface ReportDetails {
+  reportDate: string;
   reportDateFormatted: string;
   periodSummary: string;
   acknowledgmentText: string;
