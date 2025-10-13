@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/contexts/AuthContext';
+import { api } from '@/lib/api';
 import {
   ArrowLeft,
   ArrowRight,
@@ -121,13 +122,13 @@ export default function FirstLoginClientPage() {
     setIsSubmitting(true);
 
     try {
-      // const response = await api.post('/auth/password/reset', {
-      //   token: token,
-      //   newPassword: data.newPassword,
-      //   confirmPassword: data.confirmPassword,
-      // });
+      const response = await api.post('/auth/password/reset', {
+        token: token,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
 
-      // console.log('Resposta da API:', response.data);
+      console.log('Resposta da API:', response.data);
 
       setIsSuccess(true);
       toast.success('Senha definida com sucesso!', {

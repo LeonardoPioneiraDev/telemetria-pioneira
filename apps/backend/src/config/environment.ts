@@ -1,8 +1,16 @@
 //apps/backend/src/config/environment.ts
 import { config } from 'dotenv';
+import { resolve } from 'path';
 import type { EnvironmentConfig } from '../../types/environment.js';
 
-config();
+// Carregar o arquivo .env correto baseado no NODE_ENV
+// O arquivo .env.production está na raiz do projeto (../../.env.production)
+config({
+  path:
+    process.env.NODE_ENV === 'production'
+      ? resolve(process.cwd(), '../../.env.production')
+      : '.env',
+});
 
 export const environment: EnvironmentConfig = {
   // Ambiente
@@ -105,7 +113,7 @@ export const environment: EnvironmentConfig = {
     },
     passwordReset: {
       ttl: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_TTL || '3600000'),
-      limit: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_LIMIT || '3'),
+      limit: parseInt(process.env.RATE_LIMIT_PASSWORD_RESET_LIMIT || '10'),
     },
   },
 

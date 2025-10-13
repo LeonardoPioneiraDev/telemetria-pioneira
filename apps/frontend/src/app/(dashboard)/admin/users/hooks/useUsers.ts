@@ -108,28 +108,43 @@ export const useUsers = () => {
   };
 
   // Criar usuário
-  const createUser = async (userData: CreateUserData): Promise<boolean> => {
+  const createUser = async (userData: CreateUserData): Promise<{ success: boolean }> => {
     try {
       const response = await api.post('/auth/users', userData);
-      const newUser = response.data.data?.user || response.data.data;
-
-      if (newUser) {
-        setUsers(prev => [...prev, newUser]);
-      }
+      
+      // Atualizar a lista de usuários
+      await fetchUsers();
 
       toast.success('Usuário criado!', {
-        description: `${userData.fullName} foi adicionado ao sistema.`,
+        description: 'O usuário receberá um email para definir sua senha.',
       });
 
-      // Recarregar lista para garantir dados atualizados
-      await fetchUsers();
-      return true;
+      return {
+        success: true
+      };
     } catch (err: any) {
       console.error('Erro ao criar usuário:', err);
-      toast.error('Erro ao criar usuário', {
-        description: err.response?.data?.message || 'Tente novamente.',
-      });
-      return false;
+      
+      if (err.response?.data?.errors) {
+        const errors = err.response.data.errors;
+        if (Array.isArray(errors) && errors.length > 0) {
+          toast.error('Erro de validação', {
+            description: errors[0],
+          });
+        }
+      } else if (err.response?.data?.message) {
+        toast.error('Erro ao criar usuário', {
+          description: err.response.data.message,
+        });
+      } else {
+        toast.error('Erro ao criar usuário', {
+          description: 'Tente novamente.',
+        });
+      }
+      
+      return {
+        success: false
+      };
     }
   };
 

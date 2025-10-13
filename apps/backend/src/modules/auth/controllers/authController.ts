@@ -801,6 +801,12 @@ export class AuthController {
         }
       }
 
+      // Hash da senha se fornecida (corrigindo bug de hash duplo)
+      if (updateData.password) {
+        const { passwordService } = await import('../../../shared/utils/password.js');
+        updateData.password = await passwordService.hashPassword(updateData.password);
+      }
+
       const updatedUser = await userModel.update(id, updateData);
 
       if (!updatedUser) {

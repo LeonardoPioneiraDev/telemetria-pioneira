@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
+import { resetPasswordSchema, ResetPasswordFormData } from '@/lib/validations';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
   ArrowLeft,
   ArrowRight,
@@ -33,11 +35,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
-
-interface ResetPasswordFormData {
-  newPassword: string;
-  confirmPassword: string;
-}
 
 export default function ResetPasswordClientPage() {
   const router = useRouter();
@@ -62,51 +59,14 @@ export default function ResetPasswordClientPage() {
   }, [searchParams]);
 
   const form = useForm<ResetPasswordFormData>({
+    resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
       newPassword: '',
       confirmPassword: '',
     },
   });
 
-  // Validação manual (mantendo consistência com a aplicação modelo)
-  const validateForm = (data: ResetPasswordFormData): { [key: string]: string } => {
-    const errors: { [key: string]: string } = {};
-
-    // Validação da nova senha
-    if (!data.newPassword) {
-      errors.newPassword = 'Nova senha é obrigatória';
-    } else if (data.newPassword.length < 8) {
-      errors.newPassword = 'Nova senha deve ter pelo menos 8 caracteres';
-    } else if (!/[a-z]/.test(data.newPassword)) {
-      errors.newPassword = 'Deve conter pelo menos uma letra minúscula';
-    } else if (!/[A-Z]/.test(data.newPassword)) {
-      errors.newPassword = 'Deve conter pelo menos uma letra maiúscula';
-    } else if (!/\d/.test(data.newPassword)) {
-      errors.newPassword = 'Deve conter pelo menos um número';
-    } else if (!/[!@#$%^&*()_+\-=\[\]{};':"\|,.<>\/?]/.test(data.newPassword)) {
-      errors.newPassword = 'Deve conter pelo menos um caractere especial';
-    }
-
-    // Validação da confirmação
-    if (!data.confirmPassword) {
-      errors.confirmPassword = 'Confirmação é obrigatória';
-    } else if (data.newPassword !== data.confirmPassword) {
-      errors.confirmPassword = 'Senhas não coincidem';
-    }
-
-    return errors;
-  };
-
   const onSubmit = async (data: ResetPasswordFormData) => {
-    const validationErrors = validateForm(data);
-
-    if (Object.keys(validationErrors).length > 0) {
-      Object.entries(validationErrors).forEach(([field, message]) => {
-        form.setError(field as keyof ResetPasswordFormData, { message });
-      });
-      return;
-    }
-
     if (!token) {
       toast.error('Token inválido', {
         description: 'Link de recuperação inválido ou expirado.',
@@ -136,10 +96,22 @@ export default function ResetPasswordClientPage() {
 
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
+      } else if (error.response?.data?.errors && error.response.data.errors.length > 0) {
+        // Tratar erros específicos de validação
+        const validationError = error.response.data.errors[0];
+        if (validationError.includes('caracteres repetidos')) {
+          errorMessage = 'A senha não pode ter mais de 3 caracteres iguais em sequência (ex: aaaa).';
+        } else if (validationError.includes('padrões comuns')) {
+          errorMessage = 'A senha contém padrões muito comuns. Tente uma senha mais única.';
+        } else {
+          errorMessage = validationError;
+        }
       } else if (error.message?.includes('Token inválido')) {
         errorMessage = 'Link de recuperação inválido ou expirado.';
       } else if (error.message?.includes('Token expirado')) {
         errorMessage = 'Link de recuperação expirado. Solicite um novo.';
+      } else if (error.response?.status === 429) {
+        errorMessage = 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.';
       }
 
       toast.error('Erro ao redefinir senha', {

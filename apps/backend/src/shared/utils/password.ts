@@ -130,9 +130,9 @@ export class PasswordService {
       }
     }
 
-    // Verificar sequências
-    if (/(.)\1{2,}/.test(password)) {
-      errors.push('A senha não deve conter caracteres repetidos em sequência');
+    // Verificar sequências (permitir até 3 caracteres consecutivos)
+    if (/(.)\1{3,}/.test(password)) {
+      errors.push('A senha não deve conter mais de 3 caracteres repetidos em sequência');
       score -= 1;
     }
 

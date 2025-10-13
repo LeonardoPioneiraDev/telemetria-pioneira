@@ -20,6 +20,7 @@ export default function UsersManagementPage() {
     role: 'all',
     status: 'all',
   });
+
   const {
     users,
     loading,
@@ -179,10 +180,17 @@ export default function UsersManagementPage() {
     );
   }
 
-  const handleCreateUser = (data: CreateUserData | UpdateUserData) => {
+  const handleCreateUser = async (data: CreateUserData | UpdateUserData): Promise<boolean> => {
     // Como este diálogo específico é para criação, nós podemos afirmar
     // com segurança para o TypeScript que os dados estarão no formato `CreateUserData`.
-    return createUser(data as CreateUserData);
+    const result = await createUser(data as CreateUserData);
+    
+    if (result.success) {
+      // Usuário criado com sucesso, email será enviado automaticamente
+      console.log('Usuário criado com sucesso');
+    }
+    
+    return result.success;
   };
 
   return (

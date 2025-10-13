@@ -104,15 +104,25 @@ export class UserModel {
     const hashedToken = passwordService.hashResetToken(token);
     return this.userRepository
       .createQueryBuilder('user')
+      .addSelect('user.password')
       .where('user.passwordResetToken = :hashedToken', { hashedToken })
       .andWhere('user.passwordResetExpires > NOW()')
       .getOne();
   }
 
   public async update(id: string, updateData: UpdateUserData): Promise<UserEntity | null> {
-    if (updateData.password) {
-      updateData.password = await passwordService.hashPassword(updateData.password);
-    }
+    // ❌ REMOVIDO: Hash duplo da senha - o authService já faz o hash antes de chamar este método
+    // if (updateData.password) {
+    //   updateData.password = await passwordService.hashPassword(updateData.password);
+    // }
+    
+    logger.info('Atualizando usuário no banco de dados', { 
+      userId: id, 
+      fields: Object.keys(updateData),
+      hasPassword: !!updateData.password,
+      passwordLength: updateData.password?.length 
+    });
+    
     await this.userRepository.update(id, updateData);
     logger.info('Usuário atualizado com sucesso via TypeORM', { userId: id });
     return this.findById(id);

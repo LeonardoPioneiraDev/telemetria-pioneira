@@ -149,24 +149,15 @@ export class AuthService {
       throw new Error('Nome de usuário já está em uso');
     }
 
-    let temporaryPassword = userData.password;
-    let wasPasswordGenerated = false;
+    // 2. Gerar o token de primeiro acesso (sempre)
+    const firstLoginToken = this.generateFirstLoginToken();
 
-    // 2. Gerar senha temporária se não foi fornecida
-    if (!temporaryPassword) {
-      temporaryPassword = this.generateTemporaryPassword(); // Precisamos criar este método auxiliar
-      wasPasswordGenerated = true;
-    }
-
-    // 3. Gerar o token de primeiro acesso
-    const firstLoginToken = this.generateFirstLoginToken(); // E este também
-
-    // 4. Preparar dados para salvar no banco
+    // 3. Preparar dados para salvar no banco (sem senha inicial)
     const userToCreate: CreateUserData = {
       email: userData.email,
       username: userData.username,
       fullName: userData.fullName,
-      password: temporaryPassword, // A senha (temporária ou definida pelo admin)
+      password: 'temp_placeholder', // Placeholder temporário que será substituído pelo reset
       role: userData.role,
       status: userData.status,
       emailVerified: true, // Admin cria usuários já verificados
@@ -174,11 +165,12 @@ export class AuthService {
 
     const createdUser = await userModel.create(userToCreate);
 
+    // 4. Configurar token de reset para definir a primeira senha
     const hashedFirstLoginToken = passwordService.hashResetToken(firstLoginToken);
 
     const updatedUser = await userModel.update(createdUser.id, {
-      passwordResetToken: hashedFirstLoginToken, // ✅ Agora salva o token criptografado
-      passwordResetExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      passwordResetToken: hashedFirstLoginToken,
+      passwordResetExpires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 dias
     });
 
     if (!updatedUser) {
@@ -187,13 +179,12 @@ export class AuthService {
       throw new Error('Falha ao definir o token de primeiro acesso para o novo usuário.');
     }
 
-    // 6. Enviar o email de boas-vindas com o link de configuração de senha
+    // 5. Enviar o email de boas-vindas com o link de configuração de senha
     if (userData.sendWelcomeEmail) {
       try {
         await emailService.sendWelcomeEmail(updatedUser.email, {
           name: updatedUser.fullName,
           username: updatedUser.username,
-          // Novos campos para o e-mail inteligente
           firstLoginToken: firstLoginToken,
           loginUrl: `${environment.frontend.url}/login`,
         });
@@ -202,13 +193,12 @@ export class AuthService {
           error: emailError,
         });
         // Mesmo com erro no e-mail, a criação do usuário foi um sucesso.
-        // Podemos adicionar um tratamento especial aqui se necessário.
       }
     }
 
     return {
       user: this.sanitizeUser(updatedUser),
-      temporaryPassword: wasPasswordGenerated ? temporaryPassword : undefined, // Só retorna a senha se ela foi gerada
+      // Não retorna mais temporaryPassword pois agora sempre usa token de reset
     };
   }
 
@@ -510,14 +500,23 @@ export class AuthService {
         );
       }
 
+      authLogger.info('Iniciando reset de senha', { 
+        userId: user.id, 
+        email: user.email,
+        hasValidToken: !!user.passwordResetToken 
+      });
+
       // Verificar se nova senha é diferente da atual
       const isDifferent = await passwordService.isPasswordDifferent(
         data.newPassword,
         user.password
       );
       if (!isDifferent) {
+        authLogger.warn('Tentativa de definir senha igual à atual', { userId: user.id });
         throw new Error('A nova senha deve ser diferente da senha atual');
       }
+
+      authLogger.info('Nova senha é diferente da atual, prosseguindo', { userId: user.id });
 
       // Hash da nova senha
       const hashedPassword = await passwordService.hashPassword(data.newPassword);
@@ -598,14 +597,23 @@ export class AuthService {
         throw new Error('A nova senha deve ser diferente da senha atual');
       }
 
+      authLogger.info('Iniciando processo de hash da nova senha', { userId });
+
       // Hash da nova senha
       const hashedPassword = await passwordService.hashPassword(data.newPassword);
+
+      authLogger.info('Hash da senha gerado com sucesso, atualizando no banco', { 
+        userId,
+        hashLength: hashedPassword.length 
+      });
 
       // Atualizar senha
       await userModel.update(userId, {
         password: hashedPassword,
         tokenVersion: user.tokenVersion + 1, // Invalidar todos os tokens existentes
       });
+
+      authLogger.info('Senha atualizada com sucesso no banco de dados', { userId });
 
       // Enviar email de confirmação se habilitado
       if (environment.email.enabled) {

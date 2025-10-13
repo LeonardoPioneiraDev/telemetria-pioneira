@@ -123,6 +123,7 @@ services:
       HELMET_ENABLED: true
       HELMET_CSP_ENABLED: false
       HELMET_CROSS_ORIGIN_EMBEDDER_POLICY: false
+      FRONTEND_URL: ${FRONTEND_URL}
       MIX_USERNAME: ${MIX_USERNAME}
       MIX_PASSWORD: ${MIX_PASSWORD}
       MIX_BASIC_AUTH_TOKEN: ${MIX_BASIC_AUTH_TOKEN}
@@ -208,6 +209,34 @@ services:
       options:
         max-size: '10m'
         max-file: '3'
+  # ==========================================
+  # ⚙️ WORKER - DADOS DE APOIO
+  # ==========================================
+  telemetria-worker-master-data:
+    image: felipebatista54/telemetria-backend:latest
+    container_name: telemetria-worker-master-data
+    restart: unless-stopped
+    depends_on:
+      telemetria-postgres:
+        condition: service_healthy
+      telemetria-redis:
+        condition: service_healthy
+
+    # Comando que executa o runner do worker de dados de apoio
+    command: ['node', 'dist/workers/master-data-sync.runner.js']
+
+    env_file:
+      - .env
+
+    volumes:
+      - telemetria-worker-master-data-logs:/app/logs
+    networks:
+      - telemetria-network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
 
 # ==========================================
 #  VOLUMES
@@ -225,6 +254,9 @@ volumes:
   telemetria-worker-logs:
     driver: local
     name: telemetria-worker-logs
+  telemetria-worker-master-data-logs:
+    driver: local
+    name: telemetria-worker-master-data-logs
 
 # ==========================================
 #  NETWORK

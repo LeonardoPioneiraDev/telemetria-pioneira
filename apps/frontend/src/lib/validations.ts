@@ -36,7 +36,6 @@ export const resetPasswordSchema = z
 
 export const firstLoginSchema = z
   .object({
-    tempPassword: z.string().min(1, 'Senha temporária é obrigatória'),
     newPassword: z
       .string()
       .min(1, 'Nova senha é obrigatória')
