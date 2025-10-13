@@ -689,7 +689,6 @@ export class AuthController {
 
       const responseData = {
         user: result.user,
-        temporaryPassword: result.temporaryPassword,
       };
 
       return reply.status(201).send({
