@@ -71,22 +71,22 @@ export class PerformanceReportService {
     // Convertemos para bigint para garantir a comparação correta com o banco
     const eventTypeIds = infractionTypes.map(t => BigInt(t.external_id));
 
+    // Query otimizada: removido LEFT JOIN desnecessário com Driver
+    // Filtramos diretamente pelo driver_external_id já que temos o valor disponível
     const allEventsInWindow = await this.telemetryEventRepository
       .getRepository()
       .createQueryBuilder('event')
-      .leftJoin(EventType, 'eventType', 'eventType.external_id = event.event_type_external_id')
-      .leftJoin(Driver, 'driver', 'driver.external_id = event.driver_external_id')
       .select([
         'event.event_timestamp AS "event_timestamp"',
         'event.event_type_external_id AS "event_type_external_id"',
       ])
-      .where('driver.external_id = :driverExternalId', {
+      .where('event.driver_external_id = :driverExternalId', {
         driverExternalId: driver.external_id,
       })
       .andWhere('event.event_type_external_id IN (:...eventTypeIds)', { eventTypeIds })
       .andWhere('event.event_timestamp >= :windowStartDate', { windowStartDate })
       .andWhere('event.event_timestamp <= :windowEndDate', { windowEndDate })
-      .getRawMany(); // 3. Usamos getRawMany para obter um resultado simples
+      .getRawMany();
 
     if (allEventsInWindow.length === 0) {
       return this._buildEmptyReport(driver, reportDetailsReferenceDate);

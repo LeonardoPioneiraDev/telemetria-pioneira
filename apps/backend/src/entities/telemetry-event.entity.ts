@@ -2,11 +2,16 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('telemetry_events')
+@Index('idx_telemetry_events_driver_external_id', ['driver_external_id'])
+@Index('idx_telemetry_events_event_type_external_id', ['event_type_external_id'])
+@Index('idx_telemetry_events_event_timestamp', ['event_timestamp'])
+@Index('idx_telemetry_events_performance_report', ['driver_external_id', 'event_timestamp', 'event_type_external_id'])
 export class TelemetryEvent {
   @PrimaryGeneratedColumn()
   id!: number;
