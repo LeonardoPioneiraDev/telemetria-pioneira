@@ -132,8 +132,9 @@ export class EtlRecoveryService {
   }
 
   /**
-   * Gera um token "próximo" baseado no token atual (incrementa timestamp)
-   * Usado quando precisamos pular um token problemático
+   * Gera um token "próximo" baseado no token atual.
+   * Se o token estiver expirado (> 6 dias), retorna 'NEW' para reiniciar.
+   * Caso contrário, incrementa 1 segundo.
    */
   generateNextToken(currentToken: string): string {
     // Se for 'NEW', não podemos avançar
@@ -145,7 +146,6 @@ export class EtlRecoveryService {
     try {
       // O token da MiX é um timestamp no formato: YYYYMMDDHHMMSSMMM
       // Exemplo: 20251001184137000
-      // Vamos incrementar 1 segundo
       const year = parseInt(currentToken.substring(0, 4));
       const month = parseInt(currentToken.substring(4, 6)) - 1; // JS months são 0-indexed
       const day = parseInt(currentToken.substring(6, 8));
@@ -154,26 +154,36 @@ export class EtlRecoveryService {
       const second = parseInt(currentToken.substring(12, 14));
       const ms = parseInt(currentToken.substring(14, 17));
 
-      const date = new Date(year, month, day, hour, minute, second, ms);
+      const tokenDate = new Date(year, month, day, hour, minute, second, ms);
+      const now = new Date();
+      const diffDays = (now.getTime() - tokenDate.getTime()) / (1000 * 60 * 60 * 24);
 
-      // Adiciona 1 segundo
-      date.setSeconds(date.getSeconds() + 1);
+      // Se o token tem mais de 6 dias (limite da API é 7), reseta para 'NEW'
+      if (diffDays > 6) {
+        logger.warn(
+          `⚠️ Token ${currentToken} expirado (${diffDays.toFixed(1)} dias). Resetando para 'NEW' para buscar eventos recentes.`
+        );
+        return 'NEW';
+      }
+
+      // Token ainda válido, incrementa 1 segundo
+      tokenDate.setSeconds(tokenDate.getSeconds() + 1);
 
       // Formata de volta para o padrão da MiX
       const nextToken =
-        date.getFullYear().toString() +
-        (date.getMonth() + 1).toString().padStart(2, '0') +
-        date.getDate().toString().padStart(2, '0') +
-        date.getHours().toString().padStart(2, '0') +
-        date.getMinutes().toString().padStart(2, '0') +
-        date.getSeconds().toString().padStart(2, '0') +
-        date.getMilliseconds().toString().padStart(3, '0');
+        tokenDate.getFullYear().toString() +
+        (tokenDate.getMonth() + 1).toString().padStart(2, '0') +
+        tokenDate.getDate().toString().padStart(2, '0') +
+        tokenDate.getHours().toString().padStart(2, '0') +
+        tokenDate.getMinutes().toString().padStart(2, '0') +
+        tokenDate.getSeconds().toString().padStart(2, '0') +
+        tokenDate.getMilliseconds().toString().padStart(3, '0');
 
       logger.info(`⏭️ Token avançado: ${currentToken} → ${nextToken}`);
       return nextToken;
     } catch (error) {
-      logger.error('❌ Erro ao gerar próximo token, mantendo o atual', { error, currentToken });
-      return currentToken;
+      logger.error('❌ Erro ao gerar próximo token, resetando para NEW', { error, currentToken });
+      return 'NEW';
     }
   }
 

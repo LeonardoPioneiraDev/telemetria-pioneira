@@ -19,6 +19,26 @@ export class TelemetryEventRepository extends BaseRepository<TelemetryEvent> {
     await this.repository.save(events, { chunk: 200 });
   }
 
+  /**
+   * Insere eventos em massa ignorando duplicatas (INSERT ON CONFLICT DO NOTHING).
+   * Muito mais eficiente que verificar duplicatas antes de inserir.
+   * @returns Número de eventos efetivamente inseridos
+   */
+  async bulkInsertIgnoreDuplicates(events: DeepPartial<TelemetryEvent>[]): Promise<number> {
+    if (events.length === 0) return 0;
+
+    const result = await this.repository
+      .createQueryBuilder()
+      .insert()
+      .into(TelemetryEvent)
+      .values(events)
+      .orIgnore() // INSERT ON CONFLICT DO NOTHING
+      .execute();
+
+    // result.identifiers contém apenas os registros inseridos (não duplicados)
+    return result.identifiers.filter(id => id !== undefined && id !== null).length;
+  }
+
   // async findExistingExternalIds(externalIds: bigint[]): Promise<bigint[]> {
   //   if (externalIds.length === 0) {
   //     return [];

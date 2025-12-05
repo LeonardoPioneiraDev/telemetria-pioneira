@@ -1,6 +1,7 @@
 // src/components/shared/Header.tsx
 'use client';
 
+import { ChangelogButton } from '@/components/changelog/ChangelogButton';
 import { Button } from '@/components/ui/button';
 import { useAuthExtended } from '@/hooks/useAuthExtended'; // Usar o extended
 import { LogOut } from 'lucide-react';
@@ -29,6 +30,9 @@ export const Header = () => {
 
           {/* Ações do Header */}
           <div className="flex items-center space-x-3">
+            {/* Botão de Novidades */}
+            <ChangelogButton />
+
             {/* Dropdown do Usuário */}
             <UserDropdown />
 

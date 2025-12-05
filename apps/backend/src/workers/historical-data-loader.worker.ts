@@ -2,7 +2,6 @@ BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
-import { AppDataSource } from '@/data-source.js';
 import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import { DriverRepository } from '@/repositories/driver.repository.js';
 import { EventTypeRepository } from '@/repositories/event-type.repository.js';
@@ -105,20 +104,22 @@ export class HistoricalDataLoaderWorker {
             continue;
           }
 
-          // Processa eventos (filtra duplicatas e mapeia)
-          const newEvents = await this._processEventsBatch(events);
+          // Mapeia eventos para entidades (duplicatas internas removidas)
+          const eventsToInsert = this._mapEventsToEntities(events);
 
-          // Salva no banco
-          if (newEvents.length > 0) {
-            await AppDataSource.transaction(async manager => {
-              await manager.getRepository(TelemetryEvent).save(newEvents, { chunk: 500 });
+          // Salva no banco usando INSERT ON CONFLICT DO NOTHING
+          if (eventsToInsert.length > 0) {
+            const insertedCount = await this.telemetryEventRepo.bulkInsertIgnoreDuplicates(eventsToInsert);
 
-              // Dispara sync de master data se necessário
-              this._triggerMasterDataSyncIfNeeded(newEvents.map(e => e.raw_data as MixEvent));
-            });
+            if (insertedCount > 0) {
+              totalEventsProcessed += insertedCount;
+              logger.info(`✅ ${insertedCount}/${eventsToInsert.length} eventos inseridos (total: ${totalEventsProcessed})`);
 
-            totalEventsProcessed += newEvents.length;
-            logger.info(`✅ ${newEvents.length} eventos salvos (total: ${totalEventsProcessed})`);
+              // Dispara sync de master data apenas a cada 10 horas
+              if (hoursProcessed % 10 === 0) {
+                this._triggerMasterDataSyncIfNeeded(events);
+              }
+            }
           }
 
           // Atualiza progresso
@@ -194,7 +195,11 @@ export class HistoricalDataLoaderWorker {
     return `${year}${month}${day}${hours}${minutes}${seconds}`;
   }
 
-  private async _processEventsBatch(events: MixEvent[]): Promise<DeepPartial<TelemetryEvent>[]> {
+  /**
+   * Mapeia eventos para entidades, removendo apenas duplicatas internas.
+   * A verificação contra o banco é feita via INSERT ON CONFLICT DO NOTHING.
+   */
+  private _mapEventsToEntities(events: MixEvent[]): DeepPartial<TelemetryEvent>[] {
     // Remove duplicatas internas
     const uniqueEventsMap = new Map<string, MixEvent>();
     for (const event of events) {
@@ -204,23 +209,12 @@ export class HistoricalDataLoaderWorker {
 
     if (uniqueEvents.length === 0) return [];
 
-    // Verifica contra o banco
-    const incomingExternalIds = uniqueEvents.map(event => BigInt(event.EventId));
-    const existingExternalIds =
-      await this.telemetryEventRepo.findExistingExternalIds(incomingExternalIds);
-    const existingIdsSet = new Set(existingExternalIds.map(id => id.toString()));
-
-    // Filtra apenas novos
-    const newEvents = uniqueEvents.filter(event => !existingIdsSet.has(event.EventId));
-
-    if (events.length !== newEvents.length) {
-      logger.debug(
-        `🔍 Filtragem: ${events.length} recebidos → ${uniqueEvents.length} únicos → ${newEvents.length} novos`
-      );
+    if (events.length !== uniqueEvents.length) {
+      logger.debug(`🔍 Duplicatas internas removidas: ${events.length} → ${uniqueEvents.length}`);
     }
 
     // Mapeia para entidade
-    return newEvents.map(event => ({
+    return uniqueEvents.map(event => ({
       external_id: BigInt(event.EventId),
       event_timestamp: event.StartDateTime,
       latitude: event.StartPosition?.Latitude ?? null,

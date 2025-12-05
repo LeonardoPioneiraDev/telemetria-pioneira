@@ -3,11 +3,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('drivers')
+@Index('idx_drivers_employee_number', ['employee_number'])
 export class Driver {
   @PrimaryGeneratedColumn()
   id!: number;

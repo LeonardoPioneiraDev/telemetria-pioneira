@@ -105,7 +105,7 @@ export const environment: EnvironmentConfig = {
     enabled: process.env.RATE_LIMIT_ENABLED === 'true',
     global: {
       ttl: parseInt(process.env.RATE_LIMIT_GLOBAL_TTL || '60000'),
-      limit: parseInt(process.env.RATE_LIMIT_GLOBAL_LIMIT || '100'),
+      limit: parseInt(process.env.RATE_LIMIT_GLOBAL_LIMIT || '300'),
     },
     auth: {
       ttl: parseInt(process.env.RATE_LIMIT_AUTH_TTL || '18000000'),

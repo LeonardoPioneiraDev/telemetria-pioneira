@@ -54,14 +54,16 @@ export class DriverRepository extends BaseRepository<Driver> {
   }
 
   /**
-   * Realiza uma busca por nome de motorista (case-insensitive).
+   * Realiza uma busca por nome ou crachá (employee_number) - case-insensitive.
    */
-  async searchByName(name: string): Promise<Driver[]> {
+  async searchByNameOrBadge(searchTerm: string): Promise<Driver[]> {
     return this.repository.find({
-      where: {
-        name: ILike(`%${name}%`),
-      },
+      where: [
+        { name: ILike(`%${searchTerm}%`) },
+        { employee_number: ILike(`%${searchTerm}%`) },
+      ],
       take: 10,
+      order: { name: 'ASC' },
     });
   }
 }

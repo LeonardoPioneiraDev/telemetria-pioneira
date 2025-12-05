@@ -6,11 +6,13 @@ import { logger } from './shared/utils/logger.js';
 
 // Importe CADA entidade explicitamente
 import { ApiCredential } from './entities/api-credential.entity.js';
+import { ChangelogEntry } from './entities/changelog-entry.entity.js';
 import { Driver } from './entities/driver.entity.js';
 import { EtlControl } from './entities/etl-control.entity.js';
 import { EventType } from './entities/event-type.entity.js';
 import { HistoricalLoadControl } from './entities/historical-load-control.entity.js';
 import { TelemetryEvent } from './entities/telemetry-event.entity.js';
+import { UserChangelogView } from './entities/user-changelog-view.entity.js';
 import { UserEntity } from './entities/user.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
 
@@ -35,9 +37,22 @@ export const AppDataSource = new DataSource({
     ApiCredential,
     EtlControl,
     HistoricalLoadControl,
+    ChangelogEntry,
+    UserChangelogView,
   ],
   // ✅ Usar path correto baseado no ambiente
   migrations: isCompiled ? ['dist/migrations/**/*.js'] : ['src/migrations/**/*.ts'],
+
+  // ✅ Connection Pool - otimizado para ETL + API concorrentes
+  poolSize: 20, // Máximo de conexões no pool
+  extra: {
+    // Configurações do pg (node-postgres)
+    max: 20, // Máximo de conexões
+    min: 5, // Mínimo de conexões mantidas
+    idleTimeoutMillis: 30000, // Fecha conexões ociosas após 30s
+    connectionTimeoutMillis: 5000, // Timeout para obter conexão do pool
+    statement_timeout: 60000, // Timeout de 60s para queries longas
+  },
 });
 
 export async function initializeDataSource(): Promise<void> {

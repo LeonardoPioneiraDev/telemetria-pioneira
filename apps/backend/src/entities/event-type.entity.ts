@@ -3,11 +3,13 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 
 @Entity('event_types')
+@Index('idx_event_types_classification', ['classification'])
 export class EventType {
   @PrimaryGeneratedColumn()
   id!: number;

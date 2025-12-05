@@ -2,8 +2,6 @@ BigInt.prototype.toJSON = function () {
   return this.toString();
 };
 
-import { AppDataSource } from '@/data-source.js';
-import { EtlControl } from '@/entities/etl-control.entity.js';
 import { TelemetryEvent } from '@/entities/telemetry-event.entity.js';
 import { DriverRepository } from '@/repositories/driver.repository.js';
 import { EtlControlRepository } from '@/repositories/etl-control.repository.js';
@@ -188,7 +186,8 @@ export class EventIngestionWorker {
           }
         );
 
-        const newEventsToCreate = await this._processEventsBatch(response.events);
+        // Mapeia eventos para entidades (remove duplicatas internas apenas)
+        const eventsToInsert = this._mapEventsToEntities(response.events);
 
         // ✅ VERIFICAÇÃO ANTES DE SALVAR NO BANCO
         if (this.shouldStop) {
@@ -196,46 +195,30 @@ export class EventIngestionWorker {
           break;
         }
 
-        // ========== 6. SALVAR NO BANCO (TRANSAÇÃO ATÔMICA) ==========
-        await AppDataSource.transaction(async transactionalEntityManager => {
-          if (newEventsToCreate.length > 0) {
-            await transactionalEntityManager
-              .getRepository(TelemetryEvent)
-              .save(newEventsToCreate, { chunk: 200 });
+        // ========== 6. SALVAR NO BANCO (INSERT ON CONFLICT DO NOTHING) ==========
+        let insertedCount = 0;
 
-            totalEventsProcessed += newEventsToCreate.length;
+        if (eventsToInsert.length > 0) {
+          // Usa INSERT ON CONFLICT DO NOTHING - muito mais eficiente que SELECT + INSERT
+          insertedCount = await this.telemetryEventRepository.bulkInsertIgnoreDuplicates(eventsToInsert);
+          totalEventsProcessed += insertedCount;
 
-            logger.info(`✅ ${newEventsToCreate.length} novos eventos salvos no banco`, {
+          if (insertedCount > 0) {
+            logger.info(`✅ ${insertedCount}/${eventsToInsert.length} eventos inseridos (duplicatas ignoradas)`, {
               totalProcessado: totalEventsProcessed,
             });
 
-            // Dispara a sincronização apenas para os eventos que foram efetivamente criados
-            this.triggerMasterDataSyncForMissing(
-              newEventsToCreate.map(e => e.raw_data as MixEvent)
-            );
+            // Dispara sync de master data apenas a cada 10 páginas para reduzir overhead
+            if (totalPagesProcessed % 10 === 0) {
+              this.triggerMasterDataSyncForMissing(response.events);
+            }
           } else {
             logger.debug('ℹ️ Nenhum evento novo nesta página (todos já existiam no banco)');
           }
+        }
 
-          // Atualiza o token DENTRO da mesma transação, garantindo consistência
-          const controlRepo = transactionalEntityManager.getRepository(EtlControl);
-
-          const existingControl = await controlRepo.findOne({
-            where: { process_name: PROCESS_NAME },
-          });
-
-          if (existingControl) {
-            await controlRepo.update(
-              { process_name: PROCESS_NAME },
-              { last_successful_sincetoken: response.nextSinceToken }
-            );
-          } else {
-            await controlRepo.save({
-              process_name: PROCESS_NAME,
-              last_successful_sincetoken: response.nextSinceToken,
-            });
-          }
-        });
+        // Atualiza o token após inserção bem-sucedida
+        await this.etlControlRepository.updateToken(PROCESS_NAME, response.nextSinceToken);
 
         logger.debug(
           `💾 Token de controle atualizado no banco para: ${response.nextSinceToken.substring(0, 20)}...`
@@ -305,11 +288,11 @@ export class EventIngestionWorker {
   }
 
   /**
-   * Processa um lote de eventos, remove duplicatas e retorna apenas os novos
-   * Este método é SÍNCRONO e puro (sem I/O interno além da verificação no banco)
+   * Processa um lote de eventos, remove duplicatas internas e mapeia para entidade.
+   * A verificação contra o banco é feita via INSERT ON CONFLICT DO NOTHING.
    */
-  private async _processEventsBatch(events: MixEvent[]): Promise<DeepPartial<TelemetryEvent>[]> {
-    // 1. Remove duplicatas internas do lote
+  private _mapEventsToEntities(events: MixEvent[]): DeepPartial<TelemetryEvent>[] {
+    // Remove duplicatas internas do lote (mesmo EventId)
     const uniqueEventsMap = new Map<string, MixEvent>();
     for (const event of events) {
       uniqueEventsMap.set(event.EventId, event);
@@ -322,21 +305,8 @@ export class EventIngestionWorker {
       logger.debug(`🔍 Duplicatas internas removidas: ${events.length} → ${uniqueEvents.length}`);
     }
 
-    // 2. Verifica contra o banco de dados
-    const incomingExternalIds = uniqueEvents.map(event => BigInt(event.EventId));
-    const existingExternalIds =
-      await this.telemetryEventRepository.findExistingExternalIds(incomingExternalIds);
-    const existingIdsSet = new Set(existingExternalIds.map(id => id.toString()));
-
-    // 3. Filtra para obter apenas os eventos realmente novos
-    const newEvents = uniqueEvents.filter(event => !existingIdsSet.has(event.EventId));
-
-    logger.info(
-      `🔍 Filtragem de duplicatas: ${events.length} recebidos → ${uniqueEvents.length} únicos → ${newEvents.length} novos`
-    );
-
-    // 4. Mapeia apenas os novos eventos para o formato de entidade
-    return newEvents.map(event => ({
+    // Mapeia para o formato de entidade
+    return uniqueEvents.map(event => ({
       external_id: BigInt(event.EventId),
       event_timestamp: event.StartDateTime,
       latitude: event.StartPosition?.Latitude ?? null,

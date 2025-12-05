@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { DriverService } from '../services/driverService.js';
 
 export const searchQuerySchema = z.object({
-  search: z.string().min(3, { message: 'O termo de busca deve ter no mínimo 3 caracteres.' }),
+  search: z.string().min(2, { message: 'O termo de busca deve ter no mínimo 2 caracteres.' }),
 });
 
 export class DriverController {
@@ -20,8 +20,8 @@ export class DriverController {
     request: FastifyRequest, // ✅ Remover tipo genérico
     reply: FastifyReply
   ) {
-    const { search } = request.query as z.infer<typeof searchQuerySchema>; // ✅ Type assertion
-    const drivers = await this.driverService.searchByName(search);
+    const { search } = request.query as z.infer<typeof searchQuerySchema>;
+    const drivers = await this.driverService.search(search);
     return reply.send(drivers);
   }
 }

@@ -16,6 +16,7 @@ import swaggerUi from '@fastify/swagger-ui';
 import { serializerCompiler, validatorCompiler, ZodTypeProvider } from 'fastify-type-provider-zod';
 import z from 'zod';
 import { initializeDataSource } from './data-source.js';
+import { changelogRoutes } from './modules/changelog/routes/changelog.routes.js';
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
 import { historicalLoadRoutes } from './modules/etl/routes/historical-load.routes.js';
@@ -287,6 +288,8 @@ export class Application {
 
     await this.fastify.register(etlMonitoringRoutes, { prefix: '/api' });
     await this.fastify.register(historicalLoadRoutes, { prefix: '/api' });
+    await this.fastify.register(changelogRoutes, { prefix: '/api' });
+
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
 

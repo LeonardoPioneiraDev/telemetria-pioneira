@@ -144,6 +144,12 @@ export const DriverSearch = ({ onDriverSelect, selectedDriver }: DriverSearchPro
                 'transition-all duration-200'
               )}
             />
+            <p className="mt-2 text-sm text-gray-600 flex items-center gap-2">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-100 text-green-700">
+                Novo
+              </span>
+              Agora você pode pesquisar pelo número do crachá
+            </p>
           </div>
 
           {/* Dropdown de resultados */}

@@ -65,10 +65,9 @@ export class RateLimiterConfig {
         };
       },
       onExceeding: (request, key) => {
-        securityLogger.warn('Rate limit sendo excedido', {
+        logger.debug('Rate limit próximo do limite', {
           key,
           ip: request.ip,
-          userAgent: request.headers['user-agent'],
           url: request.url,
           method: request.method,
         });
