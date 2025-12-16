@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { MetricsSummary } from '@/types/metrics';
-import { Activity, AlertTriangle, Clock, LogIn, Users } from 'lucide-react';
+import { Activity, AlertTriangle, Clock, LogIn } from 'lucide-react';
 
 interface MetricsSummaryCardsProps {
   data?: MetricsSummary;

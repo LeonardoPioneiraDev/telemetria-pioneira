@@ -23,6 +23,10 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import {
   Calendar,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   Edit,
   KeyRound,
   Loader2,
@@ -32,24 +36,30 @@ import {
   UserCheck,
 } from 'lucide-react';
 import { useState } from 'react';
-import { UpdateUserData, User } from '../hooks/useUsers';
+import { PaginationState, UpdateUserData, User } from '../hooks/useUsers';
 import { DeleteUserDialog } from './DeleteUserDialog';
 import { UserDialog } from './UserDialog';
 
 interface UserTableProps {
   users: User[];
   loading: boolean;
+  pagination: PaginationState;
   onUpdateUser: (userId: string, data: UpdateUserData) => Promise<boolean>;
   onDeleteUser: (userId: string) => Promise<boolean>;
   onResetPassword: (userId: string) => Promise<boolean>;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 export function UserTable({
   users,
   loading,
+  pagination,
   onUpdateUser,
   onDeleteUser,
   onResetPassword,
+  onPageChange,
+  onPageSizeChange,
 }: UserTableProps) {
   const [resettingPassword, setResettingPassword] = useState<string | null>(null);
 
@@ -214,6 +224,64 @@ export function UserTable({
           ))}
         </TableBody>
       </Table>
+
+      {/* Controles de Paginação */}
+      {pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Itens por página:</span>
+            <select
+              value={pagination.limit}
+              onChange={e => onPageSizeChange(Number(e.target.value))}
+              className="border rounded px-2 py-1 text-sm"
+            >
+              <option value={10}>10</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(1)}
+              disabled={pagination.page === 1}
+            >
+              <ChevronsLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(pagination.page - 1)}
+              disabled={pagination.page === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <span className="px-3 text-sm text-gray-600">
+              Página <strong>{pagination.page}</strong> de <strong>{pagination.totalPages}</strong>
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(pagination.page + 1)}
+              disabled={pagination.page === pagination.totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onPageChange(pagination.totalPages)}
+              disabled={pagination.page === pagination.totalPages}
+            >
+              <ChevronsRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -66,8 +66,8 @@ export class UserActivityService {
     await this.logActivity({
       userId,
       activityType: 'login',
-      ipAddress,
-      userAgent,
+      ipAddress: ipAddress ?? null,
+      userAgent: userAgent ?? null,
       metadata: { loginAt: new Date().toISOString() },
     });
   }

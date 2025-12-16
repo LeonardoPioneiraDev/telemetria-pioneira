@@ -6,8 +6,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  LabelList,
   ResponsiveContainer,
-  Tooltip,
   XAxis,
   YAxis,
 } from 'recharts';
@@ -22,15 +22,19 @@ export function DailyPeaksChart({ data }: DailyPeaksChartProps) {
     return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
   };
 
-  const formatHour = (hour: number) => {
-    return `${hour.toString().padStart(2, '0')}:00`;
+  const formatValue = (value: unknown) => {
+    const num = Number(value);
+    if (num >= 1000) {
+      return `${(num / 1000).toFixed(1)}k`;
+    }
+    return num.toLocaleString('pt-BR');
   };
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Picos Diarios de Requisicoes</CardTitle>
-        <CardDescription>Total de requisicoes e horario de pico por dia</CardDescription>
+        <CardDescription>Total de requisicoes por dia</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="h-[280px]">
@@ -40,37 +44,24 @@ export function DailyPeaksChart({ data }: DailyPeaksChartProps) {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <BarChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="date" tickFormatter={formatDate} stroke="#6b7280" fontSize={12} />
                 <YAxis stroke="#6b7280" fontSize={12} />
-                <Tooltip
-                  labelFormatter={formatDate}
-                  formatter={(value: number, name: string) => {
-                    if (name === 'totalRequests') {
-                      return [value.toLocaleString('pt-BR'), 'Total'];
-                    }
-                    return [value.toLocaleString('pt-BR'), 'Pico'];
-                  }}
-                  content={({ active, payload, label }) => {
-                    if (active && payload && payload.length) {
-                      const item = payload[0].payload as DailyPeak;
-                      return (
-                        <div className="bg-white p-3 border rounded-lg shadow-lg">
-                          <p className="font-medium">{formatDate(label)}</p>
-                          <p className="text-sm text-gray-600">
-                            Total: {item.totalRequests.toLocaleString('pt-BR')}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Pico: {formatHour(item.peakHour)} ({item.peakHourRequests.toLocaleString('pt-BR')} req)
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="totalRequests" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="totalRequests"
+                  fill="#8b5cf6"
+                  radius={[4, 4, 0, 0]}
+                  maxBarSize={50}
+                >
+                  <LabelList
+                    dataKey="totalRequests"
+                    position="top"
+                    formatter={formatValue}
+                    fontSize={11}
+                    fill="#6b7280"
+                  />
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}

@@ -43,8 +43,8 @@ export function StatusCodePieChart({ data }: StatusCodePieChartProps) {
                   paddingAngle={2}
                   dataKey="count"
                   nameKey="statusGroup"
-                  label={({ statusGroup, percent }) =>
-                    `${statusGroup.split(' ')[0]} (${(percent * 100).toFixed(0)}%)`
+                  label={({ name, percent }) =>
+                    `${String(name).split(' ')[0]} (${(Number(percent) * 100).toFixed(0)}%)`
                   }
                   labelLine={false}
                 >

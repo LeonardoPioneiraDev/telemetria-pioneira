@@ -4,9 +4,9 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
-import { Activity, AlertCircle, Lock, RefreshCw, Shield, UserCheck, Users } from 'lucide-react';
+import { AlertCircle, Lock, RefreshCw, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { UserDialog } from './components/UserDialog';
 import { UserFilters } from './components/UserFilters';
 import { UserTable } from './components/UserTable';
@@ -15,11 +15,6 @@ import { CreateUserData, UpdateUserData, useUsers } from './hooks/useUsers';
 export default function UsersManagementPage() {
   const { user, isAuthenticated } = useAuth();
   const router = useRouter();
-  const [filters, setFilters] = useState({
-    search: '',
-    role: 'all',
-    status: 'all',
-  });
 
   const {
     users,
@@ -30,42 +25,11 @@ export default function UsersManagementPage() {
     updateUser,
     deleteUser,
     resetUserPassword,
+    pagination,
+    goToPage,
+    setPageSize,
+    applyFilters,
   } = useUsers();
-
-  // Filtrar usuários baseado nos filtros aplicados
-  const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      const matchesSearch =
-        user.fullName.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.email.toLowerCase().includes(filters.search.toLowerCase()) ||
-        user.username.toLowerCase().includes(filters.search.toLowerCase());
-
-      const matchesRole = filters.role === 'all' || user.role === filters.role;
-
-      const matchesStatus =
-        filters.status === 'all' ||
-        (filters.status === 'active' && user.status === 'active') ||
-        (filters.status === 'inactive' && user.status !== 'active');
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [users, filters]);
-
-  // Estatísticas dos usuários
-  const stats = useMemo(() => {
-    const totalUsers = users.length;
-    const activeUsers = users.filter(u => u.status === 'active').length;
-    const adminUsers = users.filter(u => u.role === 'admin').length;
-    const regularUsers = users.filter(u => u.role === 'user').length;
-
-    return {
-      total: totalUsers,
-      active: activeUsers,
-      inactive: totalUsers - activeUsers,
-      admins: adminUsers,
-      regular: regularUsers,
-    };
-  }, [users]);
 
   // 🔧 VERIFICAÇÃO DE PERMISSÃO MELHORADA
   useEffect(() => {
@@ -224,73 +188,39 @@ export default function UsersManagementPage() {
         </div>
       </div>
 
-      {/* Cards de Estatísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-blue-700">Total de Usuários</CardTitle>
-            <Users className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">{stats.total}</div>
-            <p className="text-xs text-blue-600 mt-1">
-              {stats.active} ativos, {stats.inactive} inativos
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-green-700">Usuários Ativos</CardTitle>
-            <Activity className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">{stats.active}</div>
-            <p className="text-xs text-green-600 mt-1">
-              {stats.total > 0 ? ((stats.active / stats.total) * 100).toFixed(1) : 0}% do total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-red-50 to-red-100 border-red-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-red-700">Administradores</CardTitle>
-            <Shield className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">{stats.admins}</div>
-            <p className="text-xs text-red-600 mt-1">Permissões administrativas</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-purple-700">
-              Usuários Regulares
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-900">{stats.regular}</div>
-            <p className="text-xs text-purple-600 mt-1">Permissões padrão</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Card de Total */}
+      <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium text-blue-700">Total de Usuarios</CardTitle>
+          <Users className="h-4 w-4 text-blue-600" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-900">{pagination.total}</div>
+          <p className="text-xs text-blue-600 mt-1">
+            {pagination.totalPages} {pagination.totalPages === 1 ? 'pagina' : 'paginas'}
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Filtros */}
       <UserFilters
-        onFilterChange={setFilters}
-        totalUsers={users.length}
-        filteredUsers={filteredUsers.length}
+        onFilterChange={applyFilters}
+        total={pagination.total}
+        currentCount={users.length}
+        currentPage={pagination.page}
+        totalPages={pagination.totalPages}
       />
 
       {/* Tabela de Usuários */}
       <UserTable
-        users={filteredUsers}
+        users={users}
         loading={loading}
+        pagination={pagination}
         onUpdateUser={updateUser}
         onDeleteUser={deleteUser}
         onResetPassword={resetUserPassword}
+        onPageChange={goToPage}
+        onPageSizeChange={setPageSize}
       />
     </div>
   );

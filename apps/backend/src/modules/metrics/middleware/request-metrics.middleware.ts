@@ -1,4 +1,7 @@
-import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { FastifyReply, FastifyRequest } from 'fastify';
+import type { FastifyInstance as FastifyInstanceBase } from 'fastify';
+
+type FastifyInstance = FastifyInstanceBase<any, any, any, any, any>;
 import { v4 as uuidv4 } from 'uuid';
 import { requestLoggerService } from '../services/request-logger.service.js';
 
@@ -38,15 +41,15 @@ export function registerRequestMetricsMiddleware(fastify: FastifyInstance): void
       requestId: request.metricsRequestId || uuidv4(),
       timestamp: new Date(),
       method: request.method,
-      endpoint: request.url.split('?')[0],
-      routePattern: request.routeOptions?.url || null,
-      userId: user?.id || null,
-      userRole: user?.role || null,
+      endpoint: request.url.split('?')[0] ?? '',
+      routePattern: request.routeOptions?.url ?? null,
+      userId: user?.id ?? null,
+      userRole: user?.role ?? null,
       statusCode: reply.statusCode,
       latencyMs,
       responseSizeBytes: null,
-      ipAddress: request.ip || null,
-      userAgent: request.headers['user-agent'] || null,
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
       errorMessage: null,
       errorCode: null,
     });
@@ -64,17 +67,17 @@ export function registerRequestMetricsMiddleware(fastify: FastifyInstance): void
       requestId: request.metricsRequestId || uuidv4(),
       timestamp: new Date(),
       method: request.method,
-      endpoint: request.url.split('?')[0],
-      routePattern: request.routeOptions?.url || null,
-      userId: user?.id || null,
-      userRole: user?.role || null,
+      endpoint: request.url.split('?')[0] ?? '',
+      routePattern: request.routeOptions?.url ?? null,
+      userId: user?.id ?? null,
+      userRole: user?.role ?? null,
       statusCode: 500,
       latencyMs,
       responseSizeBytes: null,
-      ipAddress: request.ip || null,
-      userAgent: request.headers['user-agent'] || null,
-      errorMessage: error.message || null,
-      errorCode: error.name || null,
+      ipAddress: request.ip ?? null,
+      userAgent: request.headers['user-agent'] ?? null,
+      errorMessage: error.message ?? null,
+      errorCode: error.name ?? null,
     });
   });
 }

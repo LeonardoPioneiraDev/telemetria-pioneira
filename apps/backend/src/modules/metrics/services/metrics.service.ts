@@ -5,10 +5,32 @@ import {
   DashboardMetrics,
   EndpointLatencyRanking,
   RequestsOverTimeData,
+  StatusCodeDetail,
   StatusCodeDistribution,
   TimeRange,
   TopUserByActivity,
 } from '../types/metrics.types.js';
+
+const STATUS_CODE_DESCRIPTIONS: Record<number, string> = {
+  200: 'OK',
+  201: 'Created',
+  204: 'No Content',
+  301: 'Moved Permanently',
+  302: 'Found',
+  304: 'Not Modified',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  405: 'Method Not Allowed',
+  409: 'Conflict',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  502: 'Bad Gateway',
+  503: 'Service Unavailable',
+  504: 'Gateway Timeout',
+};
 
 export class MetricsService {
   private static instance: MetricsService;
@@ -135,10 +157,10 @@ export class MetricsService {
       const results = await AppDataSource.query(query, [startDate, endDate]);
 
       return results.map((row: Record<string, unknown>) => ({
-        timestamp: (row.time_bucket as Date).toISOString(),
-        requestCount: parseInt(row.request_count as string, 10),
-        avgLatencyMs: parseFloat(row.avg_latency as string) || 0,
-        p95LatencyMs: parseInt(row.p95_latency as string, 10) || 0,
+        timestamp: (row['time_bucket'] as Date).toISOString(),
+        requestCount: parseInt(row['request_count'] as string, 10),
+        avgLatencyMs: parseFloat(row['avg_latency'] as string) || 0,
+        p95LatencyMs: parseInt(row['p95_latency'] as string, 10) || 0,
       }));
     } catch (error) {
       logger.error('Error fetching requests over time:', error);
@@ -169,11 +191,57 @@ export class MetricsService {
       const results = await AppDataSource.query(query, [startDate, endDate]);
 
       return results.map((row: Record<string, unknown>) => ({
-        statusGroup: row.status_group as string,
-        count: parseInt(row.count as string, 10),
+        statusGroup: row['status_group'] as string,
+        count: parseInt(row['count'] as string, 10),
       }));
     } catch (error) {
       logger.error('Error fetching status code distribution:', error);
+      throw error;
+    }
+  }
+
+  public async getStatusCodeDetails(timeRange: TimeRange): Promise<StatusCodeDetail[]> {
+    const { startDate, endDate } = this.calculateDateRange(timeRange);
+
+    try {
+      const query = `
+        SELECT
+          status_code,
+          CASE
+            WHEN status_code >= 200 AND status_code < 300 THEN '2xx Success'
+            WHEN status_code >= 300 AND status_code < 400 THEN '3xx Redirect'
+            WHEN status_code >= 400 AND status_code < 500 THEN '4xx Client Error'
+            WHEN status_code >= 500 THEN '5xx Server Error'
+            ELSE 'Other'
+          END as status_group,
+          COUNT(*)::integer as count
+        FROM request_logs
+        WHERE timestamp >= $1 AND timestamp <= $2
+        GROUP BY status_code
+        ORDER BY count DESC
+        LIMIT 20
+      `;
+
+      const results = await AppDataSource.query(query, [startDate, endDate]);
+
+      const totalRequests = results.reduce(
+        (sum: number, row: Record<string, unknown>) => sum + parseInt(row['count'] as string, 10),
+        0
+      );
+
+      return results.map((row: Record<string, unknown>) => {
+        const statusCode = parseInt(row['status_code'] as string, 10);
+        const count = parseInt(row['count'] as string, 10);
+        return {
+          statusCode,
+          statusGroup: row['status_group'] as string,
+          description: STATUS_CODE_DESCRIPTIONS[statusCode] || 'Unknown',
+          count,
+          percentage: totalRequests > 0 ? parseFloat(((count / totalRequests) * 100).toFixed(2)) : 0,
+        };
+      });
+    } catch (error) {
+      logger.error('Error fetching status code details:', error);
       throw error;
     }
   }
@@ -206,12 +274,12 @@ export class MetricsService {
       const results = await AppDataSource.query(query, [startDate, endDate, limit]);
 
       return results.map((row: Record<string, unknown>) => ({
-        userId: row.user_id as string,
-        username: row.username as string,
-        fullName: row.full_name as string,
-        role: row.role as string,
-        requestCount: parseInt(row.request_count as string, 10),
-        activeDays: parseInt(row.active_days as string, 10),
+        userId: row['user_id'] as string,
+        username: row['username'] as string,
+        fullName: row['full_name'] as string,
+        role: row['role'] as string,
+        requestCount: parseInt(row['request_count'] as string, 10),
+        activeDays: parseInt(row['active_days'] as string, 10),
       }));
     } catch (error) {
       logger.error('Error fetching top users by activity:', error);
@@ -245,12 +313,12 @@ export class MetricsService {
       const results = await AppDataSource.query(query, [startDate, endDate, limit]);
 
       return results.map((row: Record<string, unknown>) => ({
-        endpoint: row.endpoint as string,
-        method: row.method as string,
-        requestCount: parseInt(row.request_count as string, 10),
-        avgLatencyMs: parseFloat(row.avg_latency as string) || 0,
-        p95LatencyMs: parseInt(row.p95_latency as string, 10) || 0,
-        maxLatencyMs: parseInt(row.max_latency as string, 10) || 0,
+        endpoint: row['endpoint'] as string,
+        method: row['method'] as string,
+        requestCount: parseInt(row['request_count'] as string, 10),
+        avgLatencyMs: parseFloat(row['avg_latency'] as string) || 0,
+        p95LatencyMs: parseInt(row['p95_latency'] as string, 10) || 0,
+        maxLatencyMs: parseInt(row['max_latency'] as string, 10) || 0,
       }));
     } catch (error) {
       logger.error('Error fetching endpoints ranked by latency:', error);
@@ -294,10 +362,10 @@ export class MetricsService {
       const results = await AppDataSource.query(query, [startDate, endDate]);
 
       return results.map((row: Record<string, unknown>) => ({
-        date: row.date as string,
-        totalRequests: parseInt(row.total_requests as string, 10),
-        peakHour: parseInt(row.peak_hour as string, 10),
-        peakHourRequests: parseInt(row.peak_requests as string, 10),
+        date: row['date'] as string,
+        totalRequests: parseInt(row['total_requests'] as string, 10),
+        peakHour: parseInt(row['peak_hour'] as string, 10),
+        peakHourRequests: parseInt(row['peak_requests'] as string, 10),
       }));
     } catch (error) {
       logger.error('Error fetching daily request peaks:', error);

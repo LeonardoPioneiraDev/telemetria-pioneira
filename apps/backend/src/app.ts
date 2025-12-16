@@ -362,7 +362,7 @@ export class Application {
     logger.info('✅ Conexão do TypeORM com o banco de dados estabelecida!');
 
     // Registrar middleware de métricas (após DataSource estar pronto)
-    registerRequestMetricsMiddleware(this.fastify as FastifyInstance);
+    registerRequestMetricsMiddleware(this.fastify);
     logger.info('📊 Middleware de métricas registrado');
 
     // Inicializar serviço de email

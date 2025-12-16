@@ -15,11 +15,21 @@ export interface RequestsOverTimeData {
   requestCount: number;
   avgLatencyMs: number;
   p95LatencyMs: number;
+  [key: string]: string | number;
 }
 
 export interface StatusCodeDistribution {
   statusGroup: string;
   count: number;
+  [key: string]: string | number;
+}
+
+export interface StatusCodeDetail {
+  statusCode: number;
+  statusGroup: string;
+  description: string;
+  count: number;
+  percentage: number;
 }
 
 export interface TopUser {
@@ -45,6 +55,7 @@ export interface DailyPeak {
   totalRequests: number;
   peakHour: number;
   peakHourRequests: number;
+  [key: string]: string | number;
 }
 
 export interface DashboardMetricsResponse {
@@ -52,6 +63,7 @@ export interface DashboardMetricsResponse {
   charts: {
     requestsOverTime: RequestsOverTimeData[];
     statusDistribution: StatusCodeDistribution[];
+    statusCodeDetails: StatusCodeDetail[];
     dailyPeaks: DailyPeak[];
   };
   rankings: {

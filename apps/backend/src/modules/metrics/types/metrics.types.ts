@@ -22,6 +22,14 @@ export interface StatusCodeDistribution {
   count: number;
 }
 
+export interface StatusCodeDetail {
+  statusCode: number;
+  statusGroup: string;
+  description: string;
+  count: number;
+  percentage: number;
+}
+
 export interface TopUserByActivity {
   userId: string;
   username: string;
@@ -69,6 +77,7 @@ export interface DashboardResponse {
   charts: {
     requestsOverTime: RequestsOverTimeData[];
     statusDistribution: StatusCodeDistribution[];
+    statusCodeDetails: StatusCodeDetail[];
     dailyPeaks: DailyPeak[];
   };
   rankings: {

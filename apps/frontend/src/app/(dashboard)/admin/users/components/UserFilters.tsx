@@ -11,22 +11,43 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Filter, Search, Shield, UserCheck, Users, X } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface UserFiltersProps {
-  onFilterChange: (filters: { search: string; role: string; status: string }) => void;
-  totalUsers: number;
-  filteredUsers: number;
+  onFilterChange: (filters: { search?: string; role?: string; status?: string }) => void;
+  total: number;
+  currentCount: number;
+  currentPage: number;
+  totalPages: number;
 }
 
-export function UserFilters({ onFilterChange, totalUsers, filteredUsers }: UserFiltersProps) {
+export function UserFilters({
+  onFilterChange,
+  total,
+  currentCount,
+  currentPage,
+  totalPages,
+}: UserFiltersProps) {
   const [search, setSearch] = useState('');
   const [role, setRole] = useState('all');
   const [status, setStatus] = useState('all');
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+
+  const debouncedSearch = useCallback(
+    (value: string) => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+      debounceRef.current = setTimeout(() => {
+        onFilterChange({ search: value, role, status });
+      }, 400);
+    },
+    [onFilterChange, role, status]
+  );
 
   const handleSearchChange = (value: string) => {
     setSearch(value);
-    onFilterChange({ search: value, role, status });
+    debouncedSearch(value);
   };
 
   const handleRoleChange = (value: string) => {
@@ -45,6 +66,14 @@ export function UserFilters({ onFilterChange, totalUsers, filteredUsers }: UserF
     setStatus('all');
     onFilterChange({ search: '', role: 'all', status: 'all' });
   };
+
+  useEffect(() => {
+    return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
+    };
+  }, []);
 
   const hasActiveFilters = search || role !== 'all' || status !== 'all';
 
@@ -141,13 +170,16 @@ export function UserFilters({ onFilterChange, totalUsers, filteredUsers }: UserF
       {/* Contador de Resultados */}
       <div className="flex items-center justify-between text-sm text-gray-500 pt-2 border-t">
         <span>
-          Mostrando <strong>{filteredUsers}</strong> de <strong>{totalUsers}</strong> usuários
+          Mostrando <strong>{currentCount}</strong> de <strong>{total}</strong> usuarios
+          {totalPages > 1 && (
+            <span className="ml-2">
+              (Pagina {currentPage} de {totalPages})
+            </span>
+          )}
         </span>
 
         {hasActiveFilters && (
-          <span className="text-blue-600">
-            {filteredUsers < totalUsers ? 'Filtros aplicados' : 'Sem filtros'}
-          </span>
+          <span className="text-blue-600">Filtros aplicados</span>
         )}
       </div>
     </div>

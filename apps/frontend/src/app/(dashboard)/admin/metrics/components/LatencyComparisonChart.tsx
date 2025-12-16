@@ -1,7 +1,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RequestsOverTimeData, TIME_RANGE_LABELS, TimeRange } from '@/types/metrics';
+import { RequestsOverTimeData, TimeRange } from '@/types/metrics';
 import {
   CartesianGrid,
   Legend,

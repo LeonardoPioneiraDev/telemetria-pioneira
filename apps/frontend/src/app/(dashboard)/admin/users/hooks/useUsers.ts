@@ -44,10 +44,23 @@ export interface PaginationState {
   totalPages: number;
 }
 
+export interface UserFilters {
+  search?: string;
+  role?: string;
+  status?: string;
+}
+
+export interface FetchUsersParams {
+  page?: number;
+  limit?: number;
+  filters?: UserFilters;
+}
+
 export const useUsers = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<UserFilters>({});
   const [pagination, setPagination] = useState<PaginationState>({
     page: 1,
     limit: 10,
@@ -55,26 +68,34 @@ export const useUsers = () => {
     totalPages: 1,
   });
 
-  // CORRIGIDO: fetchUsers agora aceita parâmetros de paginação e filtro
-  const fetchUsers = async (params: { page?: number; limit?: number; search?: string } = {}) => {
+  const fetchUsers = async (params: FetchUsersParams = {}) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Constrói os parâmetros da URL
+      const currentFilters = params.filters ?? filters;
+      const currentPage = params.page ?? pagination.page;
+      const currentLimit = params.limit ?? pagination.limit;
+
       const queryParams = new URLSearchParams({
-        page: String(params.page || pagination.page),
-        limit: String(params.limit || pagination.limit),
+        page: String(currentPage),
+        limit: String(currentLimit),
       });
-      if (params.search) {
-        queryParams.set('search', params.search);
+
+      if (currentFilters.search && currentFilters.search.length >= 2) {
+        queryParams.set('search', currentFilters.search);
+      }
+      if (currentFilters.role && currentFilters.role !== 'all') {
+        queryParams.set('role', currentFilters.role);
+      }
+      if (currentFilters.status && currentFilters.status !== 'all') {
+        queryParams.set('status', currentFilters.status);
       }
 
       const response = await api.get(`/users?${queryParams.toString()}`);
 
-      // ✅ CORREÇÃO PRINCIPAL: Extrai os dados e a paginação corretamente
-      const responseData = response.data.data; // O array de usuários
-      const paginationData = response.data.pagination; // O objeto de paginação
+      const responseData = response.data.data;
+      const paginationData = response.data.pagination;
 
       setUsers(responseData || []);
       if (paginationData) {
@@ -82,8 +103,12 @@ export const useUsers = () => {
           page: paginationData.page,
           limit: paginationData.limit,
           total: paginationData.total,
-          totalPages: Math.ceil(paginationData.total / paginationData.limit),
+          totalPages: paginationData.totalPages || Math.ceil(paginationData.total / paginationData.limit),
         });
+      }
+
+      if (params.filters) {
+        setFilters(params.filters);
       }
     } catch (err: any) {
       console.error('Erro ao buscar usuários:', err);
@@ -107,11 +132,25 @@ export const useUsers = () => {
     }
   };
 
+  const goToPage = (page: number) => {
+    if (page >= 1 && page <= pagination.totalPages) {
+      fetchUsers({ page, filters });
+    }
+  };
+
+  const setPageSize = (limit: number) => {
+    fetchUsers({ page: 1, limit, filters });
+  };
+
+  const applyFilters = (newFilters: UserFilters) => {
+    fetchUsers({ page: 1, filters: newFilters });
+  };
+
   // Criar usuário
   const createUser = async (userData: CreateUserData): Promise<{ success: boolean }> => {
     try {
-      const response = await api.post('/auth/users', userData);
-      
+      await api.post('/auth/users', userData);
+
       // Atualizar a lista de usuários
       await fetchUsers();
 
@@ -226,5 +265,9 @@ export const useUsers = () => {
     deleteUser,
     pagination,
     resetUserPassword,
+    goToPage,
+    setPageSize,
+    applyFilters,
+    filters,
   };
 };

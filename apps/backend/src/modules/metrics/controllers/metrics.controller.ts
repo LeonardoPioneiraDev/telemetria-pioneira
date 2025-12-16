@@ -37,6 +37,7 @@ export class MetricsController {
         summary,
         requestsOverTime,
         statusDistribution,
+        statusCodeDetails,
         topUsers,
         slowestEndpoints,
         dailyPeaks,
@@ -48,6 +49,7 @@ export class MetricsController {
           ['last_hour', 'last_3h', 'last_6h', 'last_24h'].includes(timeRange) ? 'hour' : 'day'
         ),
         metricsService.getStatusCodeDistribution(timeRange),
+        metricsService.getStatusCodeDetails(timeRange),
         metricsService.getTopUsersByActivity(timeRange, 10),
         metricsService.getEndpointsRankedByLatency(timeRange, 10),
         metricsService.getDailyRequestPeaks(timeRange),
@@ -62,6 +64,7 @@ export class MetricsController {
         charts: {
           requestsOverTime,
           statusDistribution,
+          statusCodeDetails,
           dailyPeaks,
         },
         rankings: {

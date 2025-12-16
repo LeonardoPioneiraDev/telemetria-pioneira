@@ -12,6 +12,7 @@ import { LatencyComparisonChart } from './components/LatencyComparisonChart';
 import { MetricsSummaryCards } from './components/MetricsSummaryCards';
 import { RequestsOverTimeChart } from './components/RequestsOverTimeChart';
 import { SlowestEndpointsTable } from './components/SlowestEndpointsTable';
+import { StatusCodeDetailsTable } from './components/StatusCodeDetailsTable';
 import { StatusCodePieChart } from './components/StatusCodePieChart';
 import { TimeRangeSelector } from './components/TimeRangeSelector';
 import { TopUsersTable } from './components/TopUsersTable';
@@ -159,20 +160,27 @@ export default function MetricsDashboardPage() {
         )}
       </div>
 
-      {/* Charts Row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Charts Row 2 - Status Codes */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {isLoading ? (
           <>
             <Skeleton className="h-[350px]" />
-            <Skeleton className="h-[350px] lg:col-span-2" />
+            <Skeleton className="h-[350px]" />
           </>
         ) : (
           <>
             <StatusCodePieChart data={data?.charts.statusDistribution || []} />
-            <div className="lg:col-span-2">
-              <DailyPeaksChart data={data?.charts.dailyPeaks || []} />
-            </div>
+            <StatusCodeDetailsTable data={data?.charts.statusCodeDetails || []} />
           </>
+        )}
+      </div>
+
+      {/* Charts Row 3 - Daily Peaks */}
+      <div>
+        {isLoading ? (
+          <Skeleton className="h-[350px]" />
+        ) : (
+          <DailyPeaksChart data={data?.charts.dailyPeaks || []} />
         )}
       </div>
 
