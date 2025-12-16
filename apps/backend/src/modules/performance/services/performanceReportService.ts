@@ -3,7 +3,6 @@ import { AppDataSource } from '@/data-source.js';
 import { Driver } from '@/entities/driver.entity.js';
 import { EventType } from '@/entities/event-type.entity.js';
 import { DriverRepository } from '@/repositories/driver.repository.js';
-import { TelemetryEventRepository } from '@/repositories/telemetry-event.repository.js';
 import { logger } from '@/shared/utils/logger.js';
 import { Repository } from 'typeorm';
 
@@ -12,12 +11,18 @@ interface PeriodDefinition {
   label: string;
   startDate: Date;
   endDate: Date;
-  date: Date; // A data central do dia/período para referência
+  date: Date;
 }
 
 interface EventCount {
   eventType: string;
   counts: Record<string, number>;
+}
+
+interface AggregatedEventCount {
+  event_type_external_id: string;
+  period_start: string;
+  count: string;
 }
 
 export class InvalidDateRangeError extends Error {
@@ -36,17 +41,43 @@ export class DriverNotFoundError extends Error {
 
 export class PerformanceReportService {
   private driverRepository: DriverRepository;
-  private telemetryEventRepository: TelemetryEventRepository;
   private eventTypeRepository: Repository<EventType>;
+
+  // Cache estático para EventTypes (raramente mudam)
+  private static eventTypeCache: EventType[] | null = null;
+  private static eventTypeCacheExpiry: number = 0;
+  private static readonly CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutos
 
   constructor(
     driverRepository: DriverRepository = new DriverRepository(),
-    telemetryEventRepository: TelemetryEventRepository = new TelemetryEventRepository(),
     eventTypeRepository: Repository<EventType> = AppDataSource.getRepository(EventType)
   ) {
     this.driverRepository = driverRepository;
-    this.telemetryEventRepository = telemetryEventRepository;
     this.eventTypeRepository = eventTypeRepository;
+  }
+
+  /**
+   * Busca EventTypes com cache em memória
+   */
+  private async getInfractionTypes(): Promise<EventType[]> {
+    const now = Date.now();
+
+    if (
+      PerformanceReportService.eventTypeCache &&
+      PerformanceReportService.eventTypeCacheExpiry > now
+    ) {
+      return PerformanceReportService.eventTypeCache;
+    }
+
+    const types = await this.eventTypeRepository.find({
+      where: { classification: 'Infração de Condução' },
+      order: { description: 'ASC' },
+    });
+
+    PerformanceReportService.eventTypeCache = types;
+    PerformanceReportService.eventTypeCacheExpiry = now + PerformanceReportService.CACHE_TTL_MS;
+
+    return types;
   }
 
   private async _processAndGenerateReport(
@@ -59,50 +90,53 @@ export class PerformanceReportService {
       `Processando relatório para motorista ID: ${driverId} entre ${windowStartDate.toISOString()} e ${windowEndDate.toISOString()}`
     );
 
-    const driver = await this.driverRepository.findById(driverId);
+    // Paralelizar busca de driver e event types
+    const [driver, infractionTypes] = await Promise.all([
+      this.driverRepository.findById(driverId),
+      this.getInfractionTypes(),
+    ]);
+
     if (!driver) {
       throw new DriverNotFoundError();
     }
 
-    const infractionTypes = await this.eventTypeRepository.find({
-      where: { classification: 'Infração de Condução' },
-      order: { description: 'ASC' },
-    });
-    // Convertemos para bigint para garantir a comparação correta com o banco
     const eventTypeIds = infractionTypes.map(t => BigInt(t.external_id));
 
-    // Query otimizada: removido LEFT JOIN desnecessário com Driver
-    // Filtramos diretamente pelo driver_external_id já que temos o valor disponível
-    const allEventsInWindow = await this.telemetryEventRepository
-      .getRepository()
-      .createQueryBuilder('event')
-      .select([
-        'event.event_timestamp AS "event_timestamp"',
-        'event.event_type_external_id AS "event_type_external_id"',
-      ])
-      .where('event.driver_external_id = :driverExternalId', {
-        driverExternalId: driver.external_id,
-      })
-      .andWhere('event.event_type_external_id IN (:...eventTypeIds)', { eventTypeIds })
-      .andWhere('event.event_timestamp >= :windowStartDate', { windowStartDate })
-      .andWhere('event.event_timestamp <= :windowEndDate', { windowEndDate })
-      .getRawMany();
+    // Gerar períodos primeiro (sem depender dos eventos)
+    const periods = this._generatePeriodDefinitions(reportDetailsReferenceDate);
 
-    if (allEventsInWindow.length === 0) {
+    if (periods.length === 0) {
       return this._buildEmptyReport(driver, reportDetailsReferenceDate);
     }
 
-    const groupedPeriods = this._generateFixedPeriods(
-      reportDetailsReferenceDate,
-      allEventsInWindow
+    // Query otimizada: buscar contagens agregadas diretamente do banco
+    const aggregatedCounts = await this._getAggregatedEventCounts(
+      driver.external_id,
+      eventTypeIds,
+      windowStartDate,
+      windowEndDate,
+      periods
     );
-    groupedPeriods.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
 
-    // ✅ Ajustamos a chamada para a nova estrutura de 'allEventsInWindow'
-    const metrics = await this.calculateMetricsForPeriods(
-      groupedPeriods,
+    // Se não há eventos, retorna relatório vazio
+    if (aggregatedCounts.length === 0) {
+      return this._buildEmptyReport(driver, reportDetailsReferenceDate);
+    }
+
+    // Filtrar períodos que têm eventos
+    const periodsWithEvents = this._filterPeriodsWithEvents(periods, aggregatedCounts);
+
+    if (periodsWithEvents.length === 0) {
+      return this._buildEmptyReport(driver, reportDetailsReferenceDate);
+    }
+
+    periodsWithEvents.sort((a, b) => b.startDate.getTime() - a.startDate.getTime());
+
+    // Construir métricas a partir dos dados agregados
+    const metrics = this._buildMetricsFromAggregated(
+      periodsWithEvents,
       infractionTypes,
-      allEventsInWindow
+      aggregatedCounts
     );
 
     const totalEvents = metrics.reduce((total, metric) => {
@@ -118,12 +152,12 @@ export class PerformanceReportService {
       reportDetails: {
         reportDate: reportDetailsReferenceDate.toISOString(),
         reportDateFormatted: this.formatReportDate(reportDetailsReferenceDate),
-        periodSummary: this._generatePeriodSummary(groupedPeriods),
+        periodSummary: this._generatePeriodSummary(periodsWithEvents),
         acknowledgmentText:
           'O empregado foi orientado quanto ao desempenho registrado pela telemetria, com revisão de procedimentos e esclarecimento de dúvidas. Reconhece a importância da ferramenta como apoio à segurança, à eficiência operacional e à preservação da frota.',
       },
       performanceSummary: {
-        periods: groupedPeriods.map(p => ({
+        periods: periodsWithEvents.map(p => ({
           id: p.id,
           label: p.label,
           startDate: p.startDate.toISOString(),
@@ -136,10 +170,124 @@ export class PerformanceReportService {
     };
   }
 
+  /**
+   * Query otimizada: busca contagens agregadas por event_type e período diretamente no banco
+   */
+  private async _getAggregatedEventCounts(
+    driverExternalId: bigint,
+    eventTypeIds: bigint[],
+    windowStartDate: Date,
+    windowEndDate: Date,
+    periods: PeriodDefinition[]
+  ): Promise<AggregatedEventCount[]> {
+    if (periods.length === 0 || eventTypeIds.length === 0) {
+      return [];
+    }
+
+    // Construir CASE WHEN para mapear eventos aos períodos no SQL
+    const periodCases = periods
+      .map(
+        p =>
+          `WHEN event_timestamp >= '${p.startDate.toISOString()}' AND event_timestamp <= '${p.endDate.toISOString()}' THEN '${p.startDate.toISOString()}'`
+      )
+      .join('\n        ');
+
+    const query = `
+      SELECT
+        event_type_external_id::text,
+        CASE
+          ${periodCases}
+          ELSE NULL
+        END as period_start,
+        COUNT(*)::text as count
+      FROM telemetry_events
+      WHERE driver_external_id = $1
+        AND event_type_external_id = ANY($2::bigint[])
+        AND event_timestamp >= $3
+        AND event_timestamp <= $4
+      GROUP BY event_type_external_id, period_start
+      HAVING CASE
+        ${periodCases}
+        ELSE NULL
+      END IS NOT NULL
+    `;
+
+    const results = await AppDataSource.query(query, [
+      driverExternalId.toString(),
+      eventTypeIds.map(id => id.toString()),
+      windowStartDate,
+      windowEndDate,
+    ]);
+
+    return results as AggregatedEventCount[];
+  }
+
+  /**
+   * Filtra períodos que possuem pelo menos um evento
+   */
+  private _filterPeriodsWithEvents(
+    periods: PeriodDefinition[],
+    aggregatedCounts: AggregatedEventCount[]
+  ): PeriodDefinition[] {
+    const periodStartsWithEvents = new Set(
+      aggregatedCounts.map(ac => new Date(ac.period_start).toISOString())
+    );
+
+    return periods.filter(p => periodStartsWithEvents.has(p.startDate.toISOString()));
+  }
+
+  /**
+   * Constrói métricas a partir dos dados agregados do banco
+   */
+  private _buildMetricsFromAggregated(
+    periods: PeriodDefinition[],
+    infractionTypes: EventType[],
+    aggregatedCounts: AggregatedEventCount[]
+  ): EventCount[] {
+    // Criar mapa para lookup rápido: Map<eventTypeId_periodStart, count>
+    const countMap = new Map<string, number>();
+    for (const ac of aggregatedCounts) {
+      const key = `${ac.event_type_external_id}_${ac.period_start}`;
+      countMap.set(key, parseInt(ac.count, 10));
+    }
+
+    // Criar mapa de período por startDate
+    const periodMap = new Map<string, PeriodDefinition>();
+    for (const p of periods) {
+      periodMap.set(p.startDate.toISOString(), p);
+    }
+
+    const metrics: EventCount[] = [];
+
+    for (const infractionType of infractionTypes) {
+      const eventCount: EventCount = {
+        eventType: infractionType.description,
+        counts: {},
+      };
+      let hasEventsForThisType = false;
+
+      for (const period of periods) {
+        const key = `${infractionType.external_id}_${period.startDate.toISOString()}`;
+        const count = countMap.get(key) || 0;
+        eventCount.counts[period.id] = count;
+
+        if (count > 0) {
+          hasEventsForThisType = true;
+        }
+      }
+
+      if (hasEventsForThisType) {
+        metrics.push(eventCount);
+      }
+    }
+
+    return metrics;
+  }
+
   public async generatePerformanceReport(
     driverId: number,
     reportDate?: string,
-    _searchWindowDays?: number // Parâmetro ignorado, mantido para compatibilidade da assinatura do método
+    _searchWindowDays?: number
   ) {
     let effectiveReferenceDate: Date;
     if (reportDate) {
@@ -152,8 +300,6 @@ export class PerformanceReportService {
       );
     }
 
-    // AJUSTE: A janela de busca agora é definida pela nova regra de negócio.
-    // Começa no primeiro dia do mês, dois meses antes da data de referência.
     const windowStartDate = new Date(
       Date.UTC(effectiveReferenceDate.getUTCFullYear(), effectiveReferenceDate.getUTCMonth() - 2, 1)
     );
@@ -172,7 +318,7 @@ export class PerformanceReportService {
 
   public async generatePerformanceReportByDateRange(
     driverId: number,
-    _startDateString: string, // Parâmetro ignorado
+    _startDateString: string,
     endDateString: string
   ) {
     const [endYear, endMonth, endDay] = endDateString.split('-').map(Number);
@@ -182,7 +328,6 @@ export class PerformanceReportService {
       throw new InvalidDateRangeError('Data final inválida.');
     }
 
-    // Começa no primeiro dia do mês, dois meses antes da data de referência.
     const windowStartDate = new Date(
       Date.UTC(
         reportDetailsReferenceDate.getUTCFullYear(),
@@ -204,16 +349,14 @@ export class PerformanceReportService {
   }
 
   /**
-   * NOVO MÉTODO: Gera períodos com base na regra de negócio fixa.
-   * - 2 meses completos anteriores à data de referência.
-   * - Semanas do mês da data de referência.
+   * Gera definições de períodos sem depender dos eventos
    */
-  private _generateFixedPeriods(referenceDate: Date, allEvents: any[]): PeriodDefinition[] {
+  private _generatePeriodDefinitions(referenceDate: Date): PeriodDefinition[] {
     const periods: PeriodDefinition[] = [];
     const refYear = referenceDate.getUTCFullYear();
-    const refMonth = referenceDate.getUTCMonth(); // 0-11
+    const refMonth = referenceDate.getUTCMonth();
 
-    // 1. Adicionar os dois meses completos anteriores
+    // 1. Dois meses completos anteriores
     for (let i = 2; i >= 1; i--) {
       const targetDate = new Date(Date.UTC(refYear, refMonth - i, 1));
       const monthStartDate = new Date(
@@ -224,7 +367,7 @@ export class PerformanceReportService {
       );
       monthEndDate.setUTCHours(23, 59, 59, 999);
 
-      const period: PeriodDefinition = {
+      periods.push({
         id: `mes-${this.formatDateIsoMonthYear(monthStartDate)}`,
         label: this.formatDateMonthYear(monthStartDate),
         startDate: monthStartDate,
@@ -232,43 +375,32 @@ export class PerformanceReportService {
         date: new Date(
           monthStartDate.getTime() + (monthEndDate.getTime() - monthStartDate.getTime()) / 2
         ),
-      };
-
-      if (allEvents.some(e => this._isEventInPeriod(e, period.startDate, period.endDate))) {
-        periods.push(period);
-      }
+      });
     }
 
-    // 2. Adicionar as semanas do mês atual (mês de referência)
+    // 2. Semanas do mês atual
     const firstDayOfCurrentMonth = new Date(Date.UTC(refYear, refMonth, 1));
-    let weekStartDate = firstDayOfCurrentMonth;
+    let weekStartDate = new Date(firstDayOfCurrentMonth);
 
     while (weekStartDate.getUTCMonth() === refMonth && weekStartDate <= referenceDate) {
-      // O final da semana é 6 dias após o início.
       let weekEndDate = new Date(weekStartDate);
       weekEndDate.setUTCDate(weekEndDate.getUTCDate() + 6);
 
-      // Garante que o fim da semana não ultrapasse a data de referência.
       if (weekEndDate > referenceDate) {
         weekEndDate = new Date(referenceDate);
       }
       weekEndDate.setUTCHours(23, 59, 59, 999);
 
-      const period: PeriodDefinition = {
+      periods.push({
         id: `semana-${this.formatDateShort(weekStartDate).replace(/\./g, '')}_${this.formatDateShort(weekEndDate).replace(/\./g, '')}`,
         label: `Semana ${this.formatDateShort(weekStartDate)} a ${this.formatDateShort(weekEndDate)}`,
-        startDate: weekStartDate,
+        startDate: new Date(weekStartDate),
         endDate: weekEndDate,
         date: new Date(
           weekStartDate.getTime() + (weekEndDate.getTime() - weekStartDate.getTime()) / 2
         ),
-      };
+      });
 
-      if (allEvents.some(e => this._isEventInPeriod(e, period.startDate, period.endDate))) {
-        periods.push(period);
-      }
-
-      // Avança para o início da próxima semana
       weekStartDate = new Date(weekEndDate);
       weekStartDate.setUTCHours(0, 0, 0, 0);
       weekStartDate.setUTCDate(weekStartDate.getUTCDate() + 1);
@@ -276,49 +408,6 @@ export class PerformanceReportService {
 
     return periods;
   }
-
-  private _isEventInPeriod(event: any, periodStartDate: Date, periodEndDate: Date): boolean {
-    const eventOccurredAt = new Date(event.event_timestamp);
-    return (
-      eventOccurredAt.getTime() >= periodStartDate.getTime() &&
-      eventOccurredAt.getTime() <= periodEndDate.getTime()
-    );
-  }
-
-  private async calculateMetricsForPeriods(
-    periods: PeriodDefinition[],
-    infractionTypes: EventType[],
-    allEventsInWindow: any[]
-  ): Promise<EventCount[]> {
-    const metrics: EventCount[] = [];
-    for (const infractionType of infractionTypes) {
-      const eventCount: EventCount = {
-        eventType: infractionType.description,
-        counts: {},
-      };
-      let hasEventsForThisTypeInAnyPeriod = false;
-
-      for (const period of periods) {
-        const count = allEventsInWindow.filter(
-          event =>
-            // ✅ Acessamos a propriedade diretamente do resultado 'raw'
-            BigInt(event.event_type_external_id) === BigInt(infractionType.external_id) &&
-            this._isEventInPeriod(event, period.startDate, period.endDate)
-        ).length;
-
-        eventCount.counts[period.id] = count;
-        if (count > 0) {
-          hasEventsForThisTypeInAnyPeriod = true;
-        }
-      }
-      if (hasEventsForThisTypeInAnyPeriod) {
-        metrics.push(eventCount);
-      }
-    }
-    return metrics;
-  }
-
-  // --- Funções Auxiliares de Formatação e Construção ---
 
   private _buildEmptyReport(driver: Driver, referenceDate: Date) {
     return {
@@ -360,7 +449,7 @@ export class PerformanceReportService {
   }
 
   private formatDateIsoMonthYear(date: Date): string {
-    return date.toISOString().slice(0, 7); // YYYY-MM
+    return date.toISOString().slice(0, 7);
   }
 
   private formatDateMonthYear(date: Date): string {
@@ -380,7 +469,7 @@ export class PerformanceReportService {
     if (periods.length === 0) {
       return 'Nenhum período com eventos para analisar.';
     }
-    const labels = periods.map(p => p.label).reverse(); // Reverte para ordem cronológica
+    const labels = periods.map(p => p.label).reverse();
     if (labels.length === 1) {
       return `Período analisado: ${labels[0]}`;
     }
