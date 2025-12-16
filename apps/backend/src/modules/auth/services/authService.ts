@@ -1,4 +1,5 @@
 import { environment } from '../../../config/environment.js';
+import { userActivityService } from '../../../modules/metrics/services/user-activity.service.js';
 import type { UserRole, UserStatus } from '../../../shared/constants/index.js';
 import { USER_ROLES, USER_STATUS } from '../../../shared/constants/index.js';
 import { jwtService } from '../../../shared/utils/jwt.js';
@@ -336,6 +337,11 @@ export class AuthService {
         userId: user.id,
         email: user.email,
         ip: ipAddress,
+      });
+
+      // Registrar atividade de login para métricas
+      userActivityService.logLoginActivity(user.id, ipAddress).catch(err => {
+        authLogger.warn('Falha ao registrar atividade de login', { userId: user.id, error: err });
       });
 
       return {

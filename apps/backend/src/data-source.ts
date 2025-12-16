@@ -11,7 +11,9 @@ import { Driver } from './entities/driver.entity.js';
 import { EtlControl } from './entities/etl-control.entity.js';
 import { EventType } from './entities/event-type.entity.js';
 import { HistoricalLoadControl } from './entities/historical-load-control.entity.js';
+import { RequestLog } from './entities/request-log.entity.js';
 import { TelemetryEvent } from './entities/telemetry-event.entity.js';
+import { UserActivityLog } from './entities/user-activity-log.entity.js';
 import { UserChangelogView } from './entities/user-changelog-view.entity.js';
 import { UserEntity } from './entities/user.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
@@ -39,6 +41,8 @@ export const AppDataSource = new DataSource({
     HistoricalLoadControl,
     ChangelogEntry,
     UserChangelogView,
+    RequestLog,
+    UserActivityLog,
   ],
   // ✅ Usar path correto baseado no ambiente
   migrations: isCompiled ? ['dist/migrations/**/*.js'] : ['src/migrations/**/*.ts'],

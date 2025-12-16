@@ -145,7 +145,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
-import { ChevronDown, Loader2, Shield, User, UserCog, Users } from 'lucide-react';
+import { BarChart3, ChevronDown, Loader2, Shield, User, UserCog, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const UserDropdown = () => {
@@ -204,6 +204,10 @@ export const UserDropdown = () => {
     router.push('/admin/users');
   };
 
+  const handleMetricsAccess = () => {
+    router.push('/admin/metrics');
+  };
+
   const handleProfileSettings = () => {
     router.push('/profile');
   };
@@ -250,7 +254,7 @@ export const UserDropdown = () => {
             <span>Meu Perfil</span>
           </DropdownMenuItem>
 
-          {/* Opção Admin - só aparece para administradores */}
+          {/* Opções Admin - só aparecem para administradores */}
           {isAdmin() && (
             <>
               <DropdownMenuSeparator className="bg-gray-700" />
@@ -259,9 +263,19 @@ export const UserDropdown = () => {
                 className="text-gray-300 hover:text-yellow-400 hover:bg-yellow-400/10 focus:bg-yellow-400/10 focus:text-yellow-400 cursor-pointer"
               >
                 <Users className="h-4 w-4 mr-3" />
-                <span>Configurações</span>
+                <span>Gerenciar Usuarios</span>
                 <div className="ml-auto">
                   <Shield className="h-3 w-3 text-yellow-400" />
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleMetricsAccess}
+                className="text-gray-300 hover:text-emerald-400 hover:bg-emerald-400/10 focus:bg-emerald-400/10 focus:text-emerald-400 cursor-pointer"
+              >
+                <BarChart3 className="h-4 w-4 mr-3" />
+                <span>Metricas do Sistema</span>
+                <div className="ml-auto">
+                  <Shield className="h-3 w-3 text-emerald-400" />
                 </div>
               </DropdownMenuItem>
             </>
