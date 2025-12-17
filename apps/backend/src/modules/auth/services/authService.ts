@@ -260,7 +260,7 @@ export class AuthService {
   /**
    * Fazer login
    */
-  public async login(credentials: LoginCredentials, ipAddress?: string): Promise<LoginResult> {
+  public async login(credentials: LoginCredentials, ipAddress?: string, userAgent?: string | null): Promise<LoginResult> {
     try {
       authLogger.info('Tentativa de login', { email: credentials.email, ip: ipAddress });
 
@@ -340,7 +340,7 @@ export class AuthService {
       });
 
       // Registrar atividade de login para métricas
-      userActivityService.logLoginActivity(user.id, ipAddress).catch(err => {
+      userActivityService.logLoginActivity(user.id, ipAddress, userAgent).catch(err => {
         authLogger.warn('Falha ao registrar atividade de login', { userId: user.id, error: err });
       });
 

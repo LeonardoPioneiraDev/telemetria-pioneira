@@ -146,6 +146,7 @@ export class AuthController {
     try {
       const { email, password, rememberMe } = request.body as LoginBody;
       const ipAddress = request.ip;
+      const userAgent = request.headers['user-agent'] ?? null;
 
       authLogger.info('Tentativa de login', { email, ip: ipAddress });
 
@@ -155,7 +156,8 @@ export class AuthController {
           password,
           rememberMe: rememberMe ?? false,
         },
-        ipAddress
+        ipAddress,
+        userAgent
       );
 
       return reply.status(200).send({
