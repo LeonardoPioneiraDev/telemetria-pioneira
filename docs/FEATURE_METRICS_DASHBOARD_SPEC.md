@@ -1983,11 +1983,126 @@ SELECT * FROM logs WHERE ip_address << '189.10.0.0/16'; -- Subnet
 | Logar sempre | Registrar IP em logins e acoes importantes |
 | Considerar LGPD | IPs sao dados pessoais - definir retencao |
 
+### 19.11 Configuracao de Infraestrutura (OBRIGATORIO para Deploy)
+
+**IMPORTANTE**: O codigo sozinho NAO resolve o problema de captura de IP. E necessario configurar a infraestrutura corretamente em producao.
+
+#### Passo 1: Habilitar Trust Proxy no Backend
+
+O framework web (Fastify, Express, NestJS) precisa ser configurado para confiar nos headers de proxy.
+
+**Fastify (docker-compose.prod.yml):**
+```yaml
+telemetria-backend:
+  environment:
+    # ... outras variaveis
+    TRUST_PROXY: true  # OBRIGATORIO para capturar IP real
+```
+
+**Express:**
+```typescript
+app.set('trust proxy', true);
+```
+
+**NestJS (main.ts):**
+```typescript
+const app = await NestFactory.create(AppModule);
+app.set('trust proxy', true);
+```
+
+**O que TRUST_PROXY faz:**
+- Habilita o framework a ler headers `X-Forwarded-*`
+- Faz `request.ip` retornar o IP do header ao inves do socket
+- Sem isso, o framework ignora os headers e retorna o IP do proxy interno
+
+#### Passo 2: Configurar Proxy Reverso (Nginx)
+
+O proxy deve passar os headers com o IP original do cliente:
+
+```nginx
+server {
+    listen 80;
+    server_name api.exemplo.com.br;
+
+    location / {
+        proxy_pass http://localhost:3333;
+
+        # Headers OBRIGATORIOS para IP real
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+**Sem esses headers:** O backend recebe requisicoes mas nao sabe o IP original.
+
+#### Passo 3: Cloudflare (se aplicavel)
+
+Se usar Cloudflare como CDN/proxy, o IP real vem no header `CF-Connecting-IP`.
+
+O codigo do backend ja deve verificar esse header com prioridade:
+
+```typescript
+private getClientIp(request: Request): string | null {
+  // 1. Cloudflare (prioridade maxima)
+  const cfConnectingIp = request.headers['cf-connecting-ip'];
+  if (cfConnectingIp) return cfConnectingIp;
+
+  // 2. X-Real-IP (Nginx)
+  const xRealIp = request.headers['x-real-ip'];
+  if (xRealIp) return xRealIp;
+
+  // 3. X-Forwarded-For (padrao)
+  const xff = request.headers['x-forwarded-for'];
+  if (xff) return xff.split(',')[0].trim();
+
+  // 4. Fallback
+  return request.ip || null;
+}
+```
+
+#### Checklist de Verificacao
+
+```bash
+# 1. Verificar se TRUST_PROXY esta habilitado
+docker exec <container-backend> printenv | grep TRUST_PROXY
+# Esperado: TRUST_PROXY=true
+
+# 2. Testar se headers estao chegando
+curl -H "X-Forwarded-For: 189.50.100.200" http://localhost:3333/health -v
+
+# 3. Verificar IPs no banco de dados
+docker exec <container-postgres> psql -U <user> -d <db> \
+  -c "SELECT DISTINCT ip_address FROM user_page_views ORDER BY ip_address LIMIT 10;"
+```
+
+#### Troubleshooting
+
+| Sintoma | Causa Provavel | Solucao |
+|---------|----------------|---------|
+| Todos IPs sao `10.x.x.x` ou `172.x.x.x` | TRUST_PROXY=false ou ausente | Adicionar `TRUST_PROXY: true` no docker-compose |
+| IPs sao IP do servidor (ex: `192.168.1.100`) | Nginx nao passa headers | Adicionar `proxy_set_header X-Real-IP` no Nginx |
+| IPs aparecem como `::ffff:10.x.x.x` | IPv6-mapped IPv4 | Normal, o IP real esta apos `::ffff:` |
+| IP aparece com `/32` (ex: `189.10.20.30/32`) | Tipo INET do PostgreSQL | Tratar no frontend com `.replace(/\/\d+$/, '')` |
+| IP sempre `127.0.0.1` | Requisicao local sem proxy | Esperado em desenvolvimento |
+
+#### Ordem de Prioridade dos Headers
+
+O backend deve verificar os headers nesta ordem:
+
+1. `CF-Connecting-IP` - Cloudflare (mais confiavel se usar CF)
+2. `X-Real-IP` - Nginx
+3. `X-Forwarded-For` - Padrao (primeiro IP da lista)
+4. `request.ip` / `socket.remoteAddress` - Fallback (IP do proxy)
+
 ---
 
 **Documento gerado em**: 2025-12-17
-**Versao**: 2.1.0
+**Versao**: 2.2.0
 **Changelog**:
 - v1.0.0: Documentacao inicial do System Metrics Dashboard
 - v2.0.0: Adicao do modulo User Activity Dashboard (Secoes 11-18)
 - v2.1.0: Adicao da secao de Captura Correta de IP (Secao 19)
+- v2.2.0: Adicao de configuracao de infraestrutura para IP real (Secao 19.11)

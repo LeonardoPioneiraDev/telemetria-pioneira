@@ -14,6 +14,7 @@ Guia completo para deploy do backend em produção (servidor Ubuntu).
 6. [Monitoramento](#monitoramento)
 7. [Troubleshooting](#troubleshooting)
 8. [Comandos Úteis](#comandos-úteis)
+9. [Configuracao de IP Real (Proxy Reverso)](#configuracao-de-ip-real-proxy-reverso)
 
 ---
 
@@ -617,6 +618,120 @@ curl -H "Origin: https://site-malicioso.com" http://localhost:3007/health -v
 - **DockerHub:** https://hub.docker.com/r/felipebatista54/telemetria-backend
 - **Documentação TypeORM:** https://typeorm.io
 - **Documentação Fastify:** https://www.fastify.io
+
+---
+
+## 🌐 Configuracao de IP Real (Proxy Reverso)
+
+### Problema
+
+Quando a aplicacao roda atras de um proxy reverso (Nginx, Traefik, Load Balancer), o IP capturado pelo backend sera o IP interno do proxy (ex: `10.10.100.13`) ao inves do IP real do cliente.
+
+Isso afeta:
+- Logs de atividade de usuario
+- Tracking de page views
+- Rate limiting por IP
+- Logs de seguranca (login, alteracao de senha)
+
+### Solucao
+
+A solucao requer **3 configuracoes**:
+
+#### 1. Backend: TRUST_PROXY=true
+
+No `docker-compose.prod.yml`, a variavel `TRUST_PROXY` deve estar habilitada:
+
+```yaml
+telemetria-backend:
+  environment:
+    # ... outras variaveis
+    TRUST_PROXY: true  # OBRIGATORIO para capturar IP real
+```
+
+**O que isso faz:** Habilita o Fastify a confiar nos headers de proxy e extrair o IP real deles.
+
+#### 2. Nginx: Passar headers de IP
+
+O proxy reverso (Nginx) deve enviar os headers com o IP original do cliente:
+
+```nginx
+server {
+    listen 80;
+    server_name telemetriaapi.vpioneira.com.br;
+
+    location / {
+        proxy_pass http://localhost:3007;
+
+        # Headers OBRIGATORIOS para IP real
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header Host $host;
+    }
+}
+```
+
+#### 3. Cloudflare (se aplicavel)
+
+Se usar Cloudflare, o IP real vem no header `CF-Connecting-IP`. O backend ja suporta esse header automaticamente quando `TRUST_PROXY=true`.
+
+### Ordem de Prioridade dos Headers
+
+O backend extrai o IP na seguinte ordem de prioridade:
+
+1. `CF-Connecting-IP` (Cloudflare)
+2. `X-Real-IP` (Nginx)
+3. `X-Forwarded-For` (padrao, pega primeiro IP da lista)
+4. `request.ip` (fallback - IP do proxy)
+
+### Verificar se esta funcionando
+
+```bash
+# 1. Verificar se TRUST_PROXY esta habilitado
+docker exec telemetria-backend printenv | grep TRUST_PROXY
+# Deve retornar: TRUST_PROXY=true
+
+# 2. Fazer requisicao e verificar logs
+curl -H "X-Forwarded-For: 189.50.100.200" http://localhost:3007/health
+
+# 3. Verificar no banco se IPs estao sendo gravados corretamente
+docker exec telemetria-postgres psql -U telemetria_prod -d telemetriaPioneira_db \
+  -c "SELECT DISTINCT ip_address FROM user_page_views ORDER BY ip_address LIMIT 10;"
+```
+
+### Troubleshooting
+
+| Sintoma | Causa | Solucao |
+|---------|-------|---------|
+| Todos IPs sao `10.x.x.x` | `TRUST_PROXY=false` | Adicionar `TRUST_PROXY: true` no docker-compose |
+| Todos IPs sao `172.x.x.x` | Nginx nao passa headers | Adicionar `proxy_set_header X-Real-IP` no Nginx |
+| IPs aparecem como `::ffff:10.x.x.x` | IPv6 mapping | Normal, o IP real esta apos `::ffff:` |
+| IP aparece com `/32` | PostgreSQL inet type | Frontend ja trata isso com `formatIpAddress()` |
+
+### Codigo Responsavel
+
+O IP e extraido em `apps/backend/src/modules/metrics/controllers/user-activity.controller.ts`:
+
+```typescript
+private getClientIp(request: FastifyRequest): string | null {
+  // 1. Cloudflare
+  const cfConnectingIp = request.headers['cf-connecting-ip'];
+  if (cfConnectingIp) return cfConnectingIp;
+
+  // 2. X-Real-IP (Nginx)
+  const xRealIp = request.headers['x-real-ip'];
+  if (xRealIp) return xRealIp;
+
+  // 3. X-Forwarded-For (standard)
+  const xForwardedFor = request.headers['x-forwarded-for'];
+  if (xForwardedFor) {
+    return xForwardedFor.split(',')[0]?.trim();
+  }
+
+  // 4. Fallback
+  return request.ip || null;
+}
+```
 
 ---
 
