@@ -387,14 +387,14 @@ export class MetricsService {
         SELECT
           CASE
             WHEN user_agent ILIKE '%Mobile%' AND user_agent NOT ILIKE '%iPad%' AND user_agent NOT ILIKE '%Tablet%' THEN 'Mobile'
-            WHEN user_agent ILIKE '%iPad%' OR user_agent ILIKE '%Tablet%' OR user_agent ILIKE '%Android%' AND user_agent NOT ILIKE '%Mobile%' THEN 'Tablet'
+            WHEN user_agent ILIKE '%iPad%' OR user_agent ILIKE '%Tablet%' OR (user_agent ILIKE '%Android%' AND user_agent NOT ILIKE '%Mobile%') THEN 'Tablet'
             WHEN user_agent IS NULL OR user_agent = '' THEN 'Desconhecido'
             ELSE 'Desktop'
           END as device_type,
           COUNT(*)::integer as count
         FROM request_logs
         WHERE timestamp >= $1 AND timestamp <= $2
-        GROUP BY device_type
+        GROUP BY 1
         ORDER BY count DESC
       `;
 
@@ -438,7 +438,7 @@ export class MetricsService {
           COUNT(*)::integer as count
         FROM request_logs
         WHERE timestamp >= $1 AND timestamp <= $2
-        GROUP BY os
+        GROUP BY 1
         ORDER BY count DESC
       `;
 
@@ -482,7 +482,7 @@ export class MetricsService {
           COUNT(*)::integer as count
         FROM request_logs
         WHERE timestamp >= $1 AND timestamp <= $2
-        GROUP BY browser
+        GROUP BY 1
         ORDER BY count DESC
       `;
 
