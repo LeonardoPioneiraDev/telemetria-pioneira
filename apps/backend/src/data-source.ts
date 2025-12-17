@@ -16,6 +16,7 @@ import { TelemetryEvent } from './entities/telemetry-event.entity.js';
 import { UserActivityLog } from './entities/user-activity-log.entity.js';
 import { UserChangelogView } from './entities/user-changelog-view.entity.js';
 import { UserEntity } from './entities/user.entity.js';
+import { UserPageView } from './entities/user-page-view.entity.js';
 import { Vehicle } from './entities/vehicle.entity.js';
 
 // ✅ Detectar se está em produção (código compilado) ou desenvolvimento
@@ -43,6 +44,7 @@ export const AppDataSource = new DataSource({
     UserChangelogView,
     RequestLog,
     UserActivityLog,
+    UserPageView,
   ],
   // ✅ Usar path correto baseado no ambiente
   migrations: isCompiled ? ['dist/migrations/**/*.js'] : ['src/migrations/**/*.ts'],

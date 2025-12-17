@@ -22,6 +22,7 @@ import { etlMonitoringRoutes } from './modules/etl/routes/etl-monitoring.routes.
 import { historicalLoadRoutes } from './modules/etl/routes/historical-load.routes.js';
 import { registerRequestMetricsMiddleware } from './modules/metrics/middleware/request-metrics.middleware.js';
 import { metricsRoutes } from './modules/metrics/routes/metrics.routes.js';
+import { userActivityRoutes } from './modules/metrics/routes/user-activity.routes.js';
 import { userRoutes } from './modules/users/routes/userRoutes.js';
 
 // Extender o tipo FastifyRequest para incluir startTime
@@ -292,6 +293,7 @@ export class Application {
     await this.fastify.register(historicalLoadRoutes, { prefix: '/api' });
     await this.fastify.register(changelogRoutes, { prefix: '/api' });
     await this.fastify.register(metricsRoutes, { prefix: '/api' });
+    await this.fastify.register(userActivityRoutes, { prefix: '/api' });
 
     // Rota 404 personalizada
     this.fastify.setNotFoundHandler(this.notFoundHandler.bind(this));

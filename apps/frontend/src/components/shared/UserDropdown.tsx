@@ -145,7 +145,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useRoleAccess } from '@/hooks/useRoleAccess';
-import { BarChart3, ChevronDown, Loader2, Shield, User, UserCog, Users } from 'lucide-react';
+import { Activity, BarChart3, ChevronDown, Loader2, Shield, User, UserCog, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export const UserDropdown = () => {
@@ -206,6 +206,10 @@ export const UserDropdown = () => {
 
   const handleMetricsAccess = () => {
     router.push('/admin/metrics');
+  };
+
+  const handleUserActivityAccess = () => {
+    router.push('/admin/user-activity');
   };
 
   const handleProfileSettings = () => {
@@ -276,6 +280,16 @@ export const UserDropdown = () => {
                 <span>Metricas do Sistema</span>
                 <div className="ml-auto">
                   <Shield className="h-3 w-3 text-emerald-400" />
+                </div>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleUserActivityAccess}
+                className="text-gray-300 hover:text-purple-400 hover:bg-purple-400/10 focus:bg-purple-400/10 focus:text-purple-400 cursor-pointer"
+              >
+                <Activity className="h-4 w-4 mr-3" />
+                <span>Atividade de Usuarios</span>
+                <div className="ml-auto">
+                  <Shield className="h-3 w-3 text-purple-400" />
                 </div>
               </DropdownMenuItem>
             </>

@@ -61,6 +61,9 @@ export class UserEntity {
   @Column({ name: 'email_verification_expires', type: 'timestamp', nullable: true })
   emailVerificationExpires?: Date | null;
 
+  @Column({ name: 'last_activity_at', type: 'timestamptz', nullable: true })
+  lastActivityAt?: Date | null;
+
   @VersionColumn({ name: 'token_version' })
   tokenVersion!: number;
 

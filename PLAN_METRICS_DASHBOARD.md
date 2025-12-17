@@ -153,3 +153,149 @@ Response:
 - **Performance:** Logs salvos assincronamente via `setImmediate()`
 - **Seguranca:** Protecao via permission `system:metrics` (admin)
 - **Retencao:** Logs mantidos por 30 dias (funcao de cleanup disponivel)
+
+---
+
+# Modulo 2: Dashboard de Atividade de Usuarios (Secoes 11-19)
+
+> Expande o sistema de metricas com rastreamento de navegacao por usuario e dashboard de atividade detalhada.
+
+## Checklist de Implementacao - User Activity
+
+### Fase 1: Database
+- [x] Criar arquivo `002_create_user_page_views.sql` em `apps/backend/migrations-sql/`
+  - Tabela `user_page_views` para rastrear navegacao
+  - Campo `last_activity_at` na tabela `users`
+  - Funcao `cleanup_old_page_views` para limpeza automatica
+- [ ] Entregar SQL para usuario executar no DBeaver
+
+### Fase 2: Backend Core
+- [x] Criar entidade `user-page-view.entity.ts`
+- [x] Adicionar campo `lastActivityAt` em `user.entity.ts`
+- [x] Registrar entidade no `data-source.ts`
+- [x] Criar `user-activity.types.ts` (interfaces de request/response)
+- [x] Criar `user-activity.schema.ts` (validacao Zod)
+- [x] Criar `user-activity-metrics.service.ts`
+  - `logPageView()` - registra visualizacao de pagina
+  - `logPageViewAsync()` - versao async fire-and-forget
+  - `getUserActivityRanking()` - ranking com filtros e paginacao
+  - `getUserActivityDetail()` - detalhes de atividade de um usuario
+- [x] Criar `user-activity.controller.ts` com extracao correta de IP
+- [x] Criar `user-activity.routes.ts`
+- [x] Registrar rotas no `app.ts`
+
+### Fase 3: Frontend Core
+- [x] Criar `types/user-activity.ts` (interfaces e constantes)
+- [x] Criar `services/user-activity.service.ts`
+- [x] Criar `hooks/useUserActivityRanking.ts`
+- [x] Criar `hooks/useUserActivityDetail.ts`
+- [x] Criar `PageTrackingContext.tsx` (provider de rastreamento)
+- [x] Registrar provider em `providers.tsx`
+
+### Fase 4: Frontend UI
+- [x] Criar `UserActivitySummaryCards.tsx` (4 cards de resumo)
+- [x] Criar `UserActivityRankingTable.tsx` (tabela ordenavel)
+- [x] Criar `UserDetailModal.tsx` (modal com tabs: atividade, paginas, logins)
+- [x] Criar `page.tsx` em `/admin/user-activity/`
+- [x] Adicionar link "Atividade de Usuarios" no dropdown do header
+
+---
+
+## Estrutura de Arquivos - User Activity
+
+### Backend
+```
+apps/backend/
+├── migrations-sql/
+│   └── 002_create_user_page_views.sql
+└── src/
+    ├── entities/
+    │   └── user-page-view.entity.ts
+    └── modules/
+        └── metrics/
+            ├── controllers/
+            │   └── user-activity.controller.ts
+            ├── services/
+            │   └── user-activity-metrics.service.ts
+            ├── routes/
+            │   └── user-activity.routes.ts
+            ├── schemas/
+            │   └── user-activity.schema.ts
+            └── types/
+                └── user-activity.types.ts
+```
+
+### Frontend
+```
+apps/frontend/src/
+├── app/(dashboard)/admin/user-activity/
+│   ├── page.tsx
+│   ├── components/
+│   │   ├── UserActivitySummaryCards.tsx
+│   │   ├── UserActivityRankingTable.tsx
+│   │   └── UserDetailModal.tsx
+│   └── hooks/
+│       ├── useUserActivityRanking.ts
+│       └── useUserActivityDetail.ts
+├── contexts/
+│   └── PageTrackingContext.tsx
+├── services/
+│   └── user-activity.service.ts
+└── types/
+    └── user-activity.ts
+```
+
+---
+
+## APIs do Modulo User Activity
+
+### 1. Ranking de Atividade
+```
+GET /api/admin/metrics/users
+
+Query Params:
+- timeRange: 'last_hour' | 'last_24h' | 'last_7d' | 'last_30d'
+- search?: string (filtro por nome/username)
+- sortBy: 'lastLogin' | 'totalLogins' | 'totalPageViews' | 'sessionTime' | 'activeDays'
+- sortOrder: 'asc' | 'desc'
+- page: number (default 1)
+- limit: number (default 20)
+
+Response: UserActivityRankingResponse
+```
+
+### 2. Detalhes do Usuario
+```
+GET /api/admin/metrics/users/:id
+
+Query Params:
+- timeRange: 'last_hour' | 'last_24h' | 'last_7d' | 'last_30d'
+
+Response: UserActivityDetailResponse
+```
+
+### 3. Registrar Page View
+```
+POST /api/metrics/page-view
+
+Body:
+{
+  "pagePath": string,
+  "pageTitle"?: string,
+  "sessionId": string,
+  "referrer"?: string
+}
+
+Response: { success: true }
+```
+
+---
+
+## Consideracoes Tecnicas - User Activity
+
+- **Page Views:** Salvos assincronamente via `setImmediate()` (nao bloqueia response)
+- **Session ID:** Gerado no frontend via `sessionStorage` (unico por aba do browser)
+- **IP Capture:** Extrai de headers `X-Forwarded-For`, `CF-Connecting-IP`, `X-Real-IP`
+- **Timezone:** Todas as queries usam `America/Sao_Paulo`
+- **Seguranca:** Rotas admin protegidas por permission `system:metrics`
+- **Exclusoes:** Paginas `/login`, `/register`, `/forgot-password` nao sao rastreadas
