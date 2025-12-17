@@ -104,6 +104,9 @@ export const userActivityDetailResponseSchema = z.object({
       sessionDurationMinutes: z.number().nullable(),
       ipAddress: z.string().nullable(),
       userAgent: z.string().nullable(),
+      deviceType: z.string(),
+      os: z.string(),
+      browser: z.string(),
     })),
     activityOverTime: z.array(z.object({
       date: z.string(),

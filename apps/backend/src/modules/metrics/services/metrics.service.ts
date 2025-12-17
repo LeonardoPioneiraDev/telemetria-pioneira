@@ -398,14 +398,11 @@ export class MetricsService {
         ORDER BY count DESC
       `;
 
-      logger.info('getDeviceDistribution query params', { startDate, endDate });
       const results = await AppDataSource.query(query, [startDate, endDate]);
-      logger.info('getDeviceDistribution raw results', { results });
-
       const total = results.reduce((sum: number, row: Record<string, unknown>) =>
         sum + parseInt(row['count'] as string, 10), 0);
 
-      const mapped = results.map((row: Record<string, unknown>) => {
+      return results.map((row: Record<string, unknown>) => {
         const count = parseInt(row['count'] as string, 10);
         return {
           deviceType: row['device_type'] as string,
@@ -413,9 +410,6 @@ export class MetricsService {
           percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
         };
       });
-
-      logger.info('getDeviceDistribution mapped results', { mapped });
-      return mapped;
     } catch (error) {
       logger.error('Error fetching device distribution:', error);
       return [];
@@ -448,14 +442,11 @@ export class MetricsService {
         ORDER BY count DESC
       `;
 
-      logger.info('getOperatingSystemDistribution query params', { startDate, endDate });
       const results = await AppDataSource.query(query, [startDate, endDate]);
-      logger.info('getOperatingSystemDistribution raw results', { results });
-
       const total = results.reduce((sum: number, row: Record<string, unknown>) =>
         sum + parseInt(row['count'] as string, 10), 0);
 
-      const mapped = results.map((row: Record<string, unknown>) => {
+      return results.map((row: Record<string, unknown>) => {
         const count = parseInt(row['count'] as string, 10);
         return {
           os: row['os'] as string,
@@ -463,9 +454,6 @@ export class MetricsService {
           percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
         };
       });
-
-      logger.info('getOperatingSystemDistribution mapped results', { mapped });
-      return mapped;
     } catch (error) {
       logger.error('Error fetching OS distribution:', error);
       return [];
@@ -498,14 +486,11 @@ export class MetricsService {
         ORDER BY count DESC
       `;
 
-      logger.info('getBrowserDistribution query params', { startDate, endDate });
       const results = await AppDataSource.query(query, [startDate, endDate]);
-      logger.info('getBrowserDistribution raw results', { results });
-
       const total = results.reduce((sum: number, row: Record<string, unknown>) =>
         sum + parseInt(row['count'] as string, 10), 0);
 
-      const mapped = results.map((row: Record<string, unknown>) => {
+      return results.map((row: Record<string, unknown>) => {
         const count = parseInt(row['count'] as string, 10);
         return {
           browser: row['browser'] as string,
@@ -513,9 +498,6 @@ export class MetricsService {
           percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
         };
       });
-
-      logger.info('getBrowserDistribution mapped results', { mapped });
-      return mapped;
     } catch (error) {
       logger.error('Error fetching browser distribution:', error);
       return [];

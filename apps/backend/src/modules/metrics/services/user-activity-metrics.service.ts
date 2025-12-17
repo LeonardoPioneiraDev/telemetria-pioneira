@@ -14,6 +14,40 @@ import type {
   UserTopPage,
 } from '../types/user-activity.types.js';
 
+// ============================================================================
+// User Agent Parsing Helpers
+// ============================================================================
+
+function parseDeviceType(userAgent: string | null): string {
+  if (!userAgent) return 'Desconhecido';
+  const ua = userAgent.toLowerCase();
+  if (ua.includes('mobile') && !ua.includes('ipad') && !ua.includes('tablet')) return 'Mobile';
+  if (ua.includes('ipad') || ua.includes('tablet') || (ua.includes('android') && !ua.includes('mobile'))) return 'Tablet';
+  return 'Desktop';
+}
+
+function parseOS(userAgent: string | null): string {
+  if (!userAgent) return 'Desconhecido';
+  if (userAgent.includes('Windows')) return 'Windows';
+  if (userAgent.includes('Macintosh') || userAgent.includes('Mac OS')) return 'macOS';
+  if (userAgent.includes('iPhone') || userAgent.includes('iPad')) return 'iOS';
+  if (userAgent.includes('Android')) return 'Android';
+  if (userAgent.includes('Linux') && !userAgent.includes('Android')) return 'Linux';
+  if (userAgent.includes('CrOS')) return 'Chrome OS';
+  return 'Outro';
+}
+
+function parseBrowser(userAgent: string | null): string {
+  if (!userAgent) return 'Desconhecido';
+  if (userAgent.includes('Edg/') || userAgent.includes('Edge/')) return 'Edge';
+  if (userAgent.includes('OPR/') || userAgent.includes('Opera')) return 'Opera';
+  if (userAgent.includes('Chrome/') && !userAgent.includes('Edg/') && !userAgent.includes('OPR/')) return 'Chrome';
+  if (userAgent.includes('Safari/') && !userAgent.includes('Chrome/')) return 'Safari';
+  if (userAgent.includes('Firefox/')) return 'Firefox';
+  if (userAgent.includes('MSIE') || userAgent.includes('Trident')) return 'Internet Explorer';
+  return 'Outro';
+}
+
 export class UserActivityMetricsService {
   private static instance: UserActivityMetricsService;
 
@@ -401,13 +435,19 @@ export class UserActivityMetricsService {
 
       const loginsResult = await AppDataSource.query(loginsQuery, [userId, startDate, endDate]);
 
-      const recentLogins: UserLoginHistory[] = loginsResult.map((row: Record<string, unknown>) => ({
-        loginAt: (row['login_at'] as Date).toISOString(),
-        logoutAt: row['logout_at'] ? (row['logout_at'] as Date).toISOString() : null,
-        sessionDurationMinutes: row['session_duration_minutes'] ? parseFloat(String(row['session_duration_minutes'])) : null,
-        ipAddress: row['ip_address'] as string | null,
-        userAgent: row['user_agent'] as string | null,
-      }));
+      const recentLogins: UserLoginHistory[] = loginsResult.map((row: Record<string, unknown>) => {
+        const userAgent = row['user_agent'] as string | null;
+        return {
+          loginAt: (row['login_at'] as Date).toISOString(),
+          logoutAt: row['logout_at'] ? (row['logout_at'] as Date).toISOString() : null,
+          sessionDurationMinutes: row['session_duration_minutes'] ? parseFloat(String(row['session_duration_minutes'])) : null,
+          ipAddress: row['ip_address'] as string | null,
+          userAgent,
+          deviceType: parseDeviceType(userAgent),
+          os: parseOS(userAgent),
+          browser: parseBrowser(userAgent),
+        };
+      });
 
       // Get activity over time
       const activityOverTimeQuery = `

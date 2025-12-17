@@ -193,14 +193,11 @@ export default function MetricsDashboardPage() {
           ))}
         </div>
       ) : (
-        <>
-          {console.log('Metrics page - platform data:', data?.platform)}
-          <PlatformStatsCharts
-            devices={data?.platform?.devices || []}
-            operatingSystems={data?.platform?.operatingSystems || []}
-            browsers={data?.platform?.browsers || []}
-          />
-        </>
+        <PlatformStatsCharts
+          devices={data?.platform?.devices || []}
+          operatingSystems={data?.platform?.operatingSystems || []}
+          browsers={data?.platform?.browsers || []}
+        />
       )}
 
       {/* Tables Row */}

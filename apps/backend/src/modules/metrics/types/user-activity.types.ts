@@ -102,6 +102,9 @@ export interface UserLoginHistory {
   sessionDurationMinutes: number | null;
   ipAddress: string | null;
   userAgent: string | null;
+  deviceType: string;
+  os: string;
+  browser: string;
 }
 
 export interface UserActivityOverTime {

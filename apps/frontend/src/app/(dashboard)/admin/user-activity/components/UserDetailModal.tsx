@@ -22,7 +22,7 @@ import type { TimeRange } from '@/types/metrics';
 import type { UserActivityDetailResponse, UserActivityOverTime } from '@/types/user-activity';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Activity, Calendar, Clock, LogIn, Monitor } from 'lucide-react';
+import { Activity, Calendar, Clock, Globe, LogIn, Monitor, Smartphone } from 'lucide-react';
 import {
   Bar,
   BarChart,
@@ -264,37 +264,63 @@ function UserDetailContent({ data }: { data: UserActivityDetailResponse }) {
             </CardHeader>
             <CardContent>
               {recentLogins.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data/Hora</TableHead>
-                      <TableHead>Duracao</TableHead>
-                      <TableHead>IP</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentLogins.map((login, index) => (
-                      <TableRow key={index}>
-                        <TableCell>
-                          <p className="font-medium">{formatDate(login.loginAt)}</p>
-                          {login.logoutAt && (
-                            <p className="text-xs text-gray-400">
-                              Logout: {formatDate(login.logoutAt)}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {login.sessionDurationMinutes
-                            ? formatMinutes(login.sessionDurationMinutes)
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="text-gray-500 text-sm">
-                          {formatIpAddress(login.ipAddress)}
-                        </TableCell>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Data/Hora</TableHead>
+                        <TableHead>Duracao</TableHead>
+                        <TableHead>Dispositivo</TableHead>
+                        <TableHead>Sistema</TableHead>
+                        <TableHead>Navegador</TableHead>
+                        <TableHead>IP</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {recentLogins.map((login, index) => (
+                        <TableRow key={index}>
+                          <TableCell>
+                            <p className="font-medium">{formatDate(login.loginAt)}</p>
+                            {login.logoutAt && (
+                              <p className="text-xs text-gray-400">
+                                Logout: {formatDate(login.logoutAt)}
+                              </p>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {login.sessionDurationMinutes
+                              ? formatMinutes(login.sessionDurationMinutes)
+                              : '-'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              {login.deviceType === 'Mobile' ? (
+                                <Smartphone className="h-4 w-4 text-green-500" />
+                              ) : login.deviceType === 'Tablet' ? (
+                                <Monitor className="h-4 w-4 text-amber-500" />
+                              ) : (
+                                <Monitor className="h-4 w-4 text-blue-500" />
+                              )}
+                              <span className="text-sm">{login.deviceType}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {login.os}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1.5">
+                              <Globe className="h-4 w-4 text-gray-400" />
+                              <span className="text-sm">{login.browser}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-gray-500 text-sm">
+                            {formatIpAddress(login.ipAddress)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <div className="h-32 flex items-center justify-center text-gray-500">
                   Nenhum login no periodo
