@@ -58,6 +58,27 @@ export interface DailyPeak {
   [key: string]: string | number;
 }
 
+export interface PlatformDistribution {
+  deviceType: string;
+  count: number;
+  percentage: number;
+  [key: string]: string | number;
+}
+
+export interface OperatingSystemDistribution {
+  os: string;
+  count: number;
+  percentage: number;
+  [key: string]: string | number;
+}
+
+export interface BrowserDistribution {
+  browser: string;
+  count: number;
+  percentage: number;
+  [key: string]: string | number;
+}
+
 export interface DashboardMetricsResponse {
   summary: MetricsSummary;
   charts: {
@@ -69,6 +90,11 @@ export interface DashboardMetricsResponse {
   rankings: {
     topUsers: TopUser[];
     slowestEndpoints: SlowestEndpoint[];
+  };
+  platform: {
+    devices: PlatformDistribution[];
+    operatingSystems: OperatingSystemDistribution[];
+    browsers: BrowserDistribution[];
   };
 }
 

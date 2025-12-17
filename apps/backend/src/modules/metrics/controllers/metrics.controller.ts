@@ -42,6 +42,9 @@ export class MetricsController {
         slowestEndpoints,
         dailyPeaks,
         uniqueLogins,
+        deviceDistribution,
+        osDistribution,
+        browserDistribution,
       ] = await Promise.all([
         metricsService.getDashboardSummary(timeRange),
         metricsService.getRequestsOverTime(
@@ -54,6 +57,9 @@ export class MetricsController {
         metricsService.getEndpointsRankedByLatency(timeRange, 10),
         metricsService.getDailyRequestPeaks(timeRange),
         metricsService.getUniqueLoggedInUsers(timeRange),
+        metricsService.getDeviceDistribution(timeRange),
+        metricsService.getOperatingSystemDistribution(timeRange),
+        metricsService.getBrowserDistribution(timeRange),
       ]);
 
       const responseData: DashboardResponse = {
@@ -70,6 +76,11 @@ export class MetricsController {
         rankings: {
           topUsers,
           slowestEndpoints,
+        },
+        platform: {
+          devices: deviceDistribution,
+          operatingSystems: osDistribution,
+          browsers: browserDistribution,
         },
       };
 

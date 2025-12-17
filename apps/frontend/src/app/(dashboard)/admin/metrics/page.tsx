@@ -10,6 +10,7 @@ import { useEffect, useState } from 'react';
 import { DailyPeaksChart } from './components/DailyPeaksChart';
 import { LatencyComparisonChart } from './components/LatencyComparisonChart';
 import { MetricsSummaryCards } from './components/MetricsSummaryCards';
+import { PlatformStatsCharts } from './components/PlatformStatsCharts';
 import { RequestsOverTimeChart } from './components/RequestsOverTimeChart';
 import { SlowestEndpointsTable } from './components/SlowestEndpointsTable';
 import { StatusCodeDetailsTable } from './components/StatusCodeDetailsTable';
@@ -183,6 +184,21 @@ export default function MetricsDashboardPage() {
           <DailyPeaksChart data={data?.charts.dailyPeaks || []} />
         )}
       </div>
+
+      {/* Charts Row 4 - Platform Stats */}
+      {isLoading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-[350px]" />
+          ))}
+        </div>
+      ) : (
+        <PlatformStatsCharts
+          devices={data?.platform?.devices || []}
+          operatingSystems={data?.platform?.operatingSystems || []}
+          browsers={data?.platform?.browsers || []}
+        />
+      )}
 
       {/* Tables Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -1,9 +1,12 @@
 import { AppDataSource } from '@/data-source.js';
 import { logger } from '@/shared/utils/logger.js';
 import {
+  BrowserDistribution,
   DailyPeak,
   DashboardMetrics,
   EndpointLatencyRanking,
+  OperatingSystemDistribution,
+  PlatformDistribution,
   RequestsOverTimeData,
   StatusCodeDetail,
   StatusCodeDistribution,
@@ -370,6 +373,134 @@ export class MetricsService {
     } catch (error) {
       logger.error('Error fetching daily request peaks:', error);
       throw error;
+    }
+  }
+
+  /**
+   * Retorna distribuição de dispositivos (Desktop, Mobile, Tablet)
+   */
+  public async getDeviceDistribution(timeRange: TimeRange): Promise<PlatformDistribution[]> {
+    const { startDate, endDate } = this.calculateDateRange(timeRange);
+
+    try {
+      const query = `
+        SELECT
+          CASE
+            WHEN user_agent ILIKE '%Mobile%' AND user_agent NOT ILIKE '%iPad%' AND user_agent NOT ILIKE '%Tablet%' THEN 'Mobile'
+            WHEN user_agent ILIKE '%iPad%' OR user_agent ILIKE '%Tablet%' OR user_agent ILIKE '%Android%' AND user_agent NOT ILIKE '%Mobile%' THEN 'Tablet'
+            WHEN user_agent IS NULL OR user_agent = '' THEN 'Desconhecido'
+            ELSE 'Desktop'
+          END as device_type,
+          COUNT(*)::integer as count
+        FROM request_logs
+        WHERE timestamp >= $1 AND timestamp <= $2
+        GROUP BY device_type
+        ORDER BY count DESC
+      `;
+
+      const results = await AppDataSource.query(query, [startDate, endDate]);
+      const total = results.reduce((sum: number, row: Record<string, unknown>) =>
+        sum + parseInt(row['count'] as string, 10), 0);
+
+      return results.map((row: Record<string, unknown>) => {
+        const count = parseInt(row['count'] as string, 10);
+        return {
+          deviceType: row['device_type'] as string,
+          count,
+          percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
+        };
+      });
+    } catch (error) {
+      logger.error('Error fetching device distribution:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Retorna distribuição de sistemas operacionais
+   */
+  public async getOperatingSystemDistribution(timeRange: TimeRange): Promise<OperatingSystemDistribution[]> {
+    const { startDate, endDate } = this.calculateDateRange(timeRange);
+
+    try {
+      const query = `
+        SELECT
+          CASE
+            WHEN user_agent ILIKE '%Windows%' THEN 'Windows'
+            WHEN user_agent ILIKE '%Macintosh%' OR user_agent ILIKE '%Mac OS%' THEN 'macOS'
+            WHEN user_agent ILIKE '%iPhone%' OR user_agent ILIKE '%iPad%' THEN 'iOS'
+            WHEN user_agent ILIKE '%Android%' THEN 'Android'
+            WHEN user_agent ILIKE '%Linux%' AND user_agent NOT ILIKE '%Android%' THEN 'Linux'
+            WHEN user_agent ILIKE '%CrOS%' THEN 'Chrome OS'
+            WHEN user_agent IS NULL OR user_agent = '' THEN 'Desconhecido'
+            ELSE 'Outro'
+          END as os,
+          COUNT(*)::integer as count
+        FROM request_logs
+        WHERE timestamp >= $1 AND timestamp <= $2
+        GROUP BY os
+        ORDER BY count DESC
+      `;
+
+      const results = await AppDataSource.query(query, [startDate, endDate]);
+      const total = results.reduce((sum: number, row: Record<string, unknown>) =>
+        sum + parseInt(row['count'] as string, 10), 0);
+
+      return results.map((row: Record<string, unknown>) => {
+        const count = parseInt(row['count'] as string, 10);
+        return {
+          os: row['os'] as string,
+          count,
+          percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
+        };
+      });
+    } catch (error) {
+      logger.error('Error fetching OS distribution:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Retorna distribuição de navegadores
+   */
+  public async getBrowserDistribution(timeRange: TimeRange): Promise<BrowserDistribution[]> {
+    const { startDate, endDate } = this.calculateDateRange(timeRange);
+
+    try {
+      const query = `
+        SELECT
+          CASE
+            WHEN user_agent ILIKE '%Edg/%' OR user_agent ILIKE '%Edge/%' THEN 'Edge'
+            WHEN user_agent ILIKE '%OPR/%' OR user_agent ILIKE '%Opera%' THEN 'Opera'
+            WHEN user_agent ILIKE '%Chrome/%' AND user_agent NOT ILIKE '%Edg/%' AND user_agent NOT ILIKE '%OPR/%' THEN 'Chrome'
+            WHEN user_agent ILIKE '%Safari/%' AND user_agent NOT ILIKE '%Chrome/%' THEN 'Safari'
+            WHEN user_agent ILIKE '%Firefox/%' THEN 'Firefox'
+            WHEN user_agent ILIKE '%MSIE%' OR user_agent ILIKE '%Trident%' THEN 'Internet Explorer'
+            WHEN user_agent IS NULL OR user_agent = '' THEN 'Desconhecido'
+            ELSE 'Outro'
+          END as browser,
+          COUNT(*)::integer as count
+        FROM request_logs
+        WHERE timestamp >= $1 AND timestamp <= $2
+        GROUP BY browser
+        ORDER BY count DESC
+      `;
+
+      const results = await AppDataSource.query(query, [startDate, endDate]);
+      const total = results.reduce((sum: number, row: Record<string, unknown>) =>
+        sum + parseInt(row['count'] as string, 10), 0);
+
+      return results.map((row: Record<string, unknown>) => {
+        const count = parseInt(row['count'] as string, 10);
+        return {
+          browser: row['browser'] as string,
+          count,
+          percentage: total > 0 ? parseFloat(((count / total) * 100).toFixed(1)) : 0,
+        };
+      });
+    } catch (error) {
+      logger.error('Error fetching browser distribution:', error);
+      return [];
     }
   }
 }

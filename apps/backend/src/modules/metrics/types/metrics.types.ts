@@ -55,6 +55,24 @@ export interface DailyPeak {
   peakHourRequests: number;
 }
 
+export interface PlatformDistribution {
+  deviceType: string;  // Desktop, Mobile, Tablet
+  count: number;
+  percentage: number;
+}
+
+export interface OperatingSystemDistribution {
+  os: string;  // Windows, macOS, Linux, Android, iOS
+  count: number;
+  percentage: number;
+}
+
+export interface BrowserDistribution {
+  browser: string;  // Chrome, Firefox, Safari, Edge, etc
+  count: number;
+  percentage: number;
+}
+
 export interface RequestLogData {
   requestId: string;
   timestamp: Date;
@@ -83,5 +101,10 @@ export interface DashboardResponse {
   rankings: {
     topUsers: TopUserByActivity[];
     slowestEndpoints: EndpointLatencyRanking[];
+  };
+  platform: {
+    devices: PlatformDistribution[];
+    operatingSystems: OperatingSystemDistribution[];
+    browsers: BrowserDistribution[];
   };
 }
