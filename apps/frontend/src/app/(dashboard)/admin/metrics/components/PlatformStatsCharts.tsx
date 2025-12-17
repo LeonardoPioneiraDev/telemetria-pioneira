@@ -70,11 +70,15 @@ export function PlatformStatsCharts({
   operatingSystems,
   browsers,
 }: PlatformStatsChartsProps) {
+  console.log('PlatformStatsCharts props:', { devices, operatingSystems, browsers });
+
   const deviceData = devices.map((d) => ({
     name: d.deviceType,
     value: d.count,
     percentage: d.percentage,
   }));
+
+  console.log('PlatformStatsCharts deviceData:', deviceData);
 
   const osData = operatingSystems.map((os) => ({
     name: os.os,

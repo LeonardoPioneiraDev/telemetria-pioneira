@@ -62,6 +62,12 @@ export class MetricsController {
         metricsService.getBrowserDistribution(timeRange),
       ]);
 
+      logger.info('Platform distribution data fetched', {
+        deviceDistribution,
+        osDistribution,
+        browserDistribution,
+      });
+
       const responseData: DashboardResponse = {
         summary: {
           ...summary,
@@ -83,6 +89,12 @@ export class MetricsController {
           browsers: browserDistribution,
         },
       };
+
+      logger.info('Sending dashboard response with platform data', {
+        hasDevices: responseData.platform.devices.length,
+        hasOS: responseData.platform.operatingSystems.length,
+        hasBrowsers: responseData.platform.browsers.length,
+      });
 
       return reply.send({
         success: true,

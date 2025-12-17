@@ -39,6 +39,15 @@ export const dashboardResponseSchema = z.object({
           count: z.number(),
         })
       ),
+      statusCodeDetails: z.array(
+        z.object({
+          statusCode: z.number(),
+          statusGroup: z.string(),
+          description: z.string(),
+          count: z.number(),
+          percentage: z.number(),
+        })
+      ),
       dailyPeaks: z.array(
         z.object({
           date: z.string(),
@@ -67,6 +76,29 @@ export const dashboardResponseSchema = z.object({
           avgLatencyMs: z.number(),
           p95LatencyMs: z.number(),
           maxLatencyMs: z.number(),
+        })
+      ),
+    }),
+    platform: z.object({
+      devices: z.array(
+        z.object({
+          deviceType: z.string(),
+          count: z.number(),
+          percentage: z.number(),
+        })
+      ),
+      operatingSystems: z.array(
+        z.object({
+          os: z.string(),
+          count: z.number(),
+          percentage: z.number(),
+        })
+      ),
+      browsers: z.array(
+        z.object({
+          browser: z.string(),
+          count: z.number(),
+          percentage: z.number(),
         })
       ),
     }),
