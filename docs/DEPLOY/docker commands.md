@@ -1,11 +1,11 @@
 # build acelerado do frontend (script que já faz build e push no dockerhub):
 
-./scripts/build-frontend.sh 1.1.0
+./scripts/build-frontend.sh 1.2.0
 
 # Build do backend
 
-docker build -f apps/backend/Dockerfile.prod -t felipebatista54/telemetria-backend:1.1.0 -t felipebatista54/telemetria-backend:latest --no-cache .
-docker push felipebatista54/telemetria-backend:1.1.0
+docker build -f apps/backend/Dockerfile.prod -t felipebatista54/telemetria-backend:1.2.0 -t felipebatista54/telemetria-backend:latest --no-cache .
+docker push felipebatista54/telemetria-backend:1.2.0
 docker push felipebatista54/telemetria-backend:latest
 
 # no servidor:
